@@ -9,7 +9,7 @@ public:
   virtual ~PESubsystem() = default;
 
   virtual void OnBegin() = 0;
-  virtual void OnUpdate(const Time &time) = 0;
+  virtual void OnUpdate(const Time &time) {}
   virtual void OnRender() {}
   virtual void OnShutdown() = 0;
 

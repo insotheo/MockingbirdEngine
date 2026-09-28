@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Renderer.hpp"
-#include "WindowInfo.hpp"
 #include <Core/Application.hpp>
 #include <Core/Subsystem.hpp>
 #include <Core/Time.hpp>
@@ -10,17 +9,15 @@
 namespace Pumpkin::SDL::Graphics {
 class PESDLGraphiscSubsystem : public Core::PESubsystem {
 public:
-  PESDLGraphiscSubsystem(const WindowInfo &wndInfo) : m_WndInfo(wndInfo) {}
+  PESDLGraphiscSubsystem(SDL_Window *window) : m_Window(window) {}
 
   void OnBegin() override;
   void OnShutdown() override;
-  void OnUpdate(const Core::Time &time) override;
+  void OnUpdate(const Core::Time &time) override; // DBG
   void OnRender() override;
 
 private:
-  Core::Application *m_App = nullptr;
   SDL_Window *m_Window = nullptr;
   Renderer m_Renderer;
-  WindowInfo m_WndInfo;
 };
 } // namespace Pumpkin::SDL::Graphics

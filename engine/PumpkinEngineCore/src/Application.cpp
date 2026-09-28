@@ -1,12 +1,20 @@
 #include "Core/Application.hpp"
+
+#include "Core/Log.hpp"
 #include <chrono>
 
 namespace Pumpkin::Core {
 Application *Application::s_App = nullptr;
 
-Application::Application() : m_IsRunning(false) { s_App = this; }
+Application::Application() : m_IsRunning(false) {
+  if (s_App) {
+    PE_LOG_CORE_ERROR("Application already exists");
+    return;
+  }
+  s_App = this;
+}
 
-Application::~Application() { Shutdown(); }
+Application::~Application() { Terminate(); }
 
 void Application::Run() {
   m_IsRunning = true;
@@ -34,18 +42,18 @@ void Application::Run() {
 
     m_SubsystemManager.RenderAll();
   }
+
+  Terminate();
 }
 
 void Application::PostEvent(Event &event) {
   m_SubsystemManager.OnEventAll(event);
 }
 
-void Application::Shutdown() {
-  if (!m_IsRunning)
-    return;
+void Application::Shutdown() { m_IsRunning = false; }
 
-  m_IsRunning = false;
-
+void Application::Terminate() {
   m_SubsystemManager.ShutdownAll();
+  s_App = nullptr;
 }
 } // namespace Pumpkin::Core

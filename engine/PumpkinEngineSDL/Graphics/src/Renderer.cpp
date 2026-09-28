@@ -37,7 +37,7 @@ void Renderer::Shutdown() {
 
   SDL_WaitForGPUIdle(m_Device);
 
-  if (m_Wnd)
+  if (m_Wnd && m_Device)
     SDL_ReleaseWindowFromGPUDevice(m_Device, m_Wnd);
 
   SDL_DestroyGPUDevice(m_Device);

@@ -16,11 +16,12 @@ public:
 
   void PostEvent(Event &event);
 
-  inline static Application *&GetApp() { return s_App; }
+  inline static Application *GetApp() { return s_App; }
   inline SubsystemManager &GetSubsystemManager() { return m_SubsystemManager; }
 
 private:
   static Application *s_App;
+  void Terminate();
 
   bool m_IsRunning;
   Time m_Time;
