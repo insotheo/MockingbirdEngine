@@ -36,43 +36,66 @@ void Renderer::Shutdown() {
     return;
 
   SDL_WaitForGPUIdle(m_Device);
+
   if (m_Wnd)
     SDL_ReleaseWindowFromGPUDevice(m_Device, m_Wnd);
+
   SDL_DestroyGPUDevice(m_Device);
 
   m_Device = nullptr;
   m_Wnd = nullptr;
 }
 
-void Renderer::Render() {
-  SDL_GPUCommandBuffer *cmdBuff = SDL_AcquireGPUCommandBuffer(m_Device);
-  if (!cmdBuff)
+void Renderer::BeginDraw2D() {
+  if (m_IsDrawing)
     return;
 
-  SDL_GPUTexture *swapchainTxt;
-  bool success = SDL_AcquireGPUSwapchainTexture(cmdBuff, m_Wnd, &swapchainTxt,
-                                                nullptr, nullptr);
-  if (!swapchainTxt || !success) {
-    SDL_CancelGPUCommandBuffer(cmdBuff);
+  m_CurrentCmdBuff = SDL_AcquireGPUCommandBuffer(m_Device);
+  if (!m_CurrentCmdBuff)
+    return;
+
+  // TODO framebuffer
+  bool success = SDL_AcquireGPUSwapchainTexture(
+      m_CurrentCmdBuff, m_Wnd, &m_CurrentTargetTexture, nullptr, nullptr);
+  if (!success || !m_CurrentTargetTexture) {
+    SDL_CancelGPUCommandBuffer(m_CurrentCmdBuff);
+    m_CurrentCmdBuff = nullptr;
     return;
   }
 
-  // base clear color
+  m_IsDrawing = true;
+}
+
+void Renderer::Clear(float r, float g, float b, float alpha) {
+  if (!m_IsDrawing || !m_CurrentCmdBuff || m_CurrentRenderPass)
+    return;
+
   SDL_GPUColorTargetInfo colorTargetInfo{};
-  colorTargetInfo.texture = swapchainTxt;
-  colorTargetInfo.clear_color =
-      SDL_FColor{226 / 255.f, 120 / 255.f, 38 / 255.f, 1.0f};
+  colorTargetInfo.texture = m_CurrentTargetTexture;
+  colorTargetInfo.clear_color = SDL_FColor{r, g, b, alpha};
   colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
   colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
 
-  SDL_GPURenderPass *renderPass =
-      SDL_BeginGPURenderPass(cmdBuff, &colorTargetInfo, 1, nullptr);
+  m_CurrentRenderPass =
+      SDL_BeginGPURenderPass(m_CurrentCmdBuff, &colorTargetInfo, 1, nullptr);
+}
 
-  // TODO DRAW CALLS
+void Renderer::EndDraw2D() {
+  if (!m_IsDrawing)
+    return;
 
-  SDL_EndGPURenderPass(renderPass);
+  if (m_CurrentRenderPass) {
+    SDL_EndGPURenderPass(m_CurrentRenderPass);
+    m_CurrentRenderPass = nullptr;
+  }
 
-  SDL_SubmitGPUCommandBuffer(cmdBuff);
+  if (m_CurrentCmdBuff) {
+    SDL_SubmitGPUCommandBuffer(m_CurrentCmdBuff);
+    m_CurrentCmdBuff = nullptr;
+  }
+
+  m_CurrentTargetTexture = nullptr;
+  m_IsDrawing = false;
 }
 
 } // namespace Pumpkin::SDL::Graphics
