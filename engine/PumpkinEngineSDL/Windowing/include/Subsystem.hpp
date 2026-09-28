@@ -16,6 +16,7 @@ public:
   void OnShutdown() override;
 
   inline SDL_Window *GetSDLWindow() const { return m_Window; }
+  void *GetNativeWindowHandle();
 
 private:
   Core::Application *m_App = nullptr;
