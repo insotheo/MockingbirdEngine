@@ -29,6 +29,8 @@ void Renderer::Init(SDL_Window *wnd) {
     m_Device = nullptr;
     return;
   }
+
+  SetVSync(m_VSync);
 }
 
 void Renderer::Shutdown() {
@@ -44,6 +46,22 @@ void Renderer::Shutdown() {
 
   m_Device = nullptr;
   m_Wnd = nullptr;
+}
+
+void Renderer::SetVSync(bool state) {
+  if (!m_Device || !m_Wnd)
+    return;
+
+  m_VSync = state;
+
+  SDL_GPUPresentMode presentMode =
+      state ? SDL_GPU_PRESENTMODE_VSYNC : SDL_GPU_PRESENTMODE_IMMEDIATE;
+
+  SDL_SetGPUSwapchainParameters(m_Device, m_Wnd,
+                                SDL_GPU_SWAPCHAINCOMPOSITION_SDR, presentMode);
+
+  PE_LOG_CORE_INFO("VSync state changed to: {}",
+                   (state ? "ENABLED" : "DISABLED"));
 }
 
 void Renderer::BeginDraw2D() {
