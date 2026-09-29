@@ -1,9 +1,23 @@
 #include "Subsystem.hpp"
 
+#include "GraphicsHandle.hpp"
+#include "VertexLayout.hpp"
+#include <Core/FileSys.hpp>
 #include <Core/Log.hpp>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <span>
+#include <vector>
 
 Pumpkin::Core::Time t;
+std::vector<std::byte> vertCode =
+    Pumpkin::Core::LoadFileBytes("./triangle.vert.spv");
+std::vector<std::byte> fragCode =
+    Pumpkin::Core::LoadFileBytes("./triangle.frag.spv");
+Pumpkin::SDL::Graphics::ShaderHandle shader;
+Pumpkin::SDL::Graphics::MeshHandle mesh;
+Pumpkin::SDL::Graphics::PipelineHandle pipeline;
 
 namespace Pumpkin::SDL::Graphics {
 
@@ -19,6 +33,27 @@ void PESDLGraphiscSubsystem::OnBegin() {
     PE_LOG_CORE_ERROR("Failed to create Renderer!");
     return;
   }
+
+  // DBG
+  shader = m_Renderer.CreateShader(vertCode, fragCode, {});
+  pipeline = m_Renderer.CreateGraphicsPipeline(
+      shader,
+      {.VertexSize = 2 * sizeof(float),
+       .Attributes = {PEVertexAttribute{
+           .Location = 0, .Format = PEVertexFormat::Float2, .Offset = 0}}});
+
+  std::vector<float> verticies = {
+      // clang-format off
+    0.0f, 0.5f,
+    -0.5f, -0.5f,
+    0.5f, -0.5f,
+      // clang-format on
+  };
+  std::vector<uint16_t> indicies = {0, 1, 2};
+
+  mesh = m_Renderer.CreateMesh(
+      std::as_bytes(std::span(verticies)), 2 * sizeof(float),
+      std::as_bytes(std::span(indicies)), sizeof(uint16_t));
 }
 
 void PESDLGraphiscSubsystem::OnUpdate(const Core::Time &time) {
@@ -37,6 +72,7 @@ void PESDLGraphiscSubsystem::OnRender() {
 
   m_Renderer.BeginDraw2D();
   m_Renderer.Clear(r, g, b);
+  m_Renderer.DrawMesh(mesh, pipeline);
   m_Renderer.EndDraw2D();
 }
 

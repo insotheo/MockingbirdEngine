@@ -12,3 +12,16 @@ target_link_libraries(Sandbox
         PumpkinEngineSDLWindowing
         PumpkinEngineSDLGraphics
 )
+
+#ASSETS
+file(GLOB SANDBOX_ASSETS
+assets/*.spv
+)
+
+add_custom_command(
+    TARGET Sandbox POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+        ${SANDBOX_ASSETS}
+        ${CMAKE_BINARY_DIR}/bin
+    COMMENT "Copying assets..."
+)

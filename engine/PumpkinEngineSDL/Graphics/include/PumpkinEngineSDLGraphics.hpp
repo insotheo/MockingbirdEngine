@@ -1,6 +1,8 @@
 #pragma once
 
+#include "Descriptors.hpp"
+#include "GraphicsHandle.hpp"
+
 #include "Renderer.hpp"
-#include "WindowInfo.hpp"
 
 #include "Subsystem.hpp"
