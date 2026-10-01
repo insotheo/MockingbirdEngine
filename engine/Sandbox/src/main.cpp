@@ -16,12 +16,6 @@ class SandboxApplication : public Pumpkin::Core::Application {
                 .GetSubsystem<
                     Pumpkin::SDL::Windowing::PESDLWindowingSubsystem>()
                 ->GetSDLWindow());
-
-    PE_LOG_INFO(
-        "{}",
-        GetSubsystemManager()
-            .GetSubsystem<Pumpkin::SDL::Windowing::PESDLWindowingSubsystem>()
-            ->GetNativeWindowHandle());
   }
 };
 

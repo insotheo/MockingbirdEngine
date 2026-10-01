@@ -24,22 +24,25 @@ public:
   inline bool IsVSyncEnabled() const { return m_VSync; }
 
   MeshHandle CreateMesh(std::span<const std::byte> verticies,
-                        uint32_t vertexElementSize,
+                        uint32_t vertexStride,
                         std::span<const std::byte> indicies,
-                        uint32_t indexElementSize);
+                        uint32_t indexStride);
 
   ShaderHandle CreateShader(std::span<const std::byte> vert,
                             std::span<const std::byte> frag,
                             const ShaderProgramDesc &desc);
 
   PipelineHandle CreateGraphicsPipeline(const ShaderHandle &shader,
-                                        const PEVertexLayout &layout);
+                                        const VertexLayout &layout);
 
   void DrawMesh(const MeshHandle &meshHnd, PipelineHandle pipelineHnd);
 
+  inline void SetClearColor(float r, float g, float b, float alpha = 1.0f) {
+    m_ClearColor = SDL_FColor{r, g, b, alpha};
+  }
+
   // 2D rendering
   void BeginDraw2D(); // TODO: camera2D and target texture
-  void Clear(float r, float g, float b, float alpha = 1.0f);
   void EndDraw2D();
 
 private:
@@ -53,6 +56,7 @@ private:
     SDL_GPUBuffer *IndexBuffer;
     uint32_t VertexCount;
     uint32_t IndexCount;
+    SDL_GPUIndexElementSize IndexFormat;
     uint32_t Version;
   };
 
@@ -63,9 +67,15 @@ private:
   };
 
 private:
+  SDL_GPUShader *CreateShaderStage(std::span<const std::byte> code,
+                                   const ShaderStageDesc &desc,
+                                   SDL_GPUShaderStage stage);
+
+private:
   SDL_GPUDevice *m_Device = nullptr;
   SDL_Window *m_Wnd = nullptr;
 
+  SDL_FColor m_ClearColor = SDL_FColor{0.1f, 0.1f, 0.1f, 1.0f};
   SDL_GPUCommandBuffer *m_CurrentCmdBuff = nullptr;
   SDL_GPURenderPass *m_CurrentRenderPass = nullptr;
   SDL_GPUTexture *m_CurrentTargetTexture = nullptr;

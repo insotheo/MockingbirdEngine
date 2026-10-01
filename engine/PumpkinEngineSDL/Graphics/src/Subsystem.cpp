@@ -4,17 +4,17 @@
 #include "VertexLayout.hpp"
 #include <Core/FileSys.hpp>
 #include <Core/Log.hpp>
-#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <span>
 #include <vector>
 
-Pumpkin::Core::Time t;
-std::vector<std::byte> vertCode =
-    Pumpkin::Core::LoadFileBytes("./triangle.vert.spv");
-std::vector<std::byte> fragCode =
-    Pumpkin::Core::LoadFileBytes("./triangle.frag.spv");
+Pumpkin::SDL::Graphics::VertexLayout
+    layout({Pumpkin::SDL::Graphics::PEVertexAttribute(
+                Pumpkin::SDL::Graphics::ShaderDataType::Float2, "inPos"),
+            Pumpkin::SDL::Graphics::PEVertexAttribute(
+                Pumpkin::SDL::Graphics::ShaderDataType::Float3, "inColor")});
+
 Pumpkin::SDL::Graphics::ShaderHandle shader;
 Pumpkin::SDL::Graphics::MeshHandle mesh;
 Pumpkin::SDL::Graphics::PipelineHandle pipeline;
@@ -35,30 +35,32 @@ void PESDLGraphiscSubsystem::OnBegin() {
   }
 
   // DBG
+  std::vector<std::byte> vertCode =
+      Pumpkin::Core::LoadFileBytes("./triangle.vert.spv");
+  std::vector<std::byte> fragCode =
+      Pumpkin::Core::LoadFileBytes("./triangle.frag.spv");
+
   shader = m_Renderer.CreateShader(vertCode, fragCode, {});
-  pipeline = m_Renderer.CreateGraphicsPipeline(
-      shader,
-      {.VertexSize = 2 * sizeof(float),
-       .Attributes = {PEVertexAttribute{
-           .Location = 0, .Format = PEVertexFormat::Float2, .Offset = 0}}});
+  pipeline = m_Renderer.CreateGraphicsPipeline(shader, layout);
 
   std::vector<float> verticies = {
       // clang-format off
-    0.0f, 0.5f,
-    -0.5f, -0.5f,
-    0.5f, -0.5f,
+    -0.75f, 0.75f,     1.0f, 0.0f, 0.0f,
+    -0.75f, -0.75f,   0.0f, 1.0f, 0.0f,
+    0.75f, -0.75f, 0.0f, 0.0f, 1.0f,
+    0.75f, 0.75f, 0.3f, 0.5f, 0.5f,
       // clang-format on
   };
-  std::vector<uint16_t> indicies = {0, 1, 2};
+  std::vector<uint16_t> indicies = {0, 1, 2, 2, 3, 0};
 
   mesh = m_Renderer.CreateMesh(
-      std::as_bytes(std::span(verticies)), 2 * sizeof(float),
+      std::as_bytes(std::span(verticies)), layout.GetStride(),
       std::as_bytes(std::span(indicies)), sizeof(uint16_t));
+
+  m_Renderer.SetClearColor(0.2f, 1.f, 0.4f);
 }
 
-void PESDLGraphiscSubsystem::OnUpdate(const Core::Time &time) {
-  t = time;
-} // DBG
+void PESDLGraphiscSubsystem::OnUpdate(const Core::Time &time) {} // DBG
 
 void PESDLGraphiscSubsystem::OnShutdown() {
   m_Renderer.Shutdown();
@@ -66,12 +68,7 @@ void PESDLGraphiscSubsystem::OnShutdown() {
 }
 
 void PESDLGraphiscSubsystem::OnRender() {
-  float r = std::sin(t.TotalTime * 1.5f + 0.0f) * 0.5f + 0.5f;
-  float g = std::sin(t.TotalTime * 1.5f + 2.0f) * 0.5f + 0.5f;
-  float b = std::sin(t.TotalTime * 1.5f + 4.0f) * 0.5f + 0.5f;
-
   m_Renderer.BeginDraw2D();
-  m_Renderer.Clear(r, g, b);
   m_Renderer.DrawMesh(mesh, pipeline);
   m_Renderer.EndDraw2D();
 }
