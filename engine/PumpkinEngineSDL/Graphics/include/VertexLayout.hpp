@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Core/Debug.hpp>
 #include <SDL3/SDL.h>
 #include <cstdint>
 #include <string>
@@ -39,8 +40,10 @@ static uint32_t ShaderDataTypeSize(ShaderDataType t) {
   case ShaderDataType::Int4:
     return 4 * 4;
 
-  default:
+  default: {
+    PE_ASSERT(false, "Unknown ShaderDataType");
     return 0;
+  }
   }
 }
 
@@ -64,8 +67,10 @@ static SDL_GPUVertexElementFormat ShaderDataTypeToSDL(ShaderDataType t) {
   case ShaderDataType::Int4:
     return SDL_GPU_VERTEXELEMENTFORMAT_INT4;
 
-  default:
+  default: {
+    PE_ASSERT(false, "Unknown ShaderDataType");
     return SDL_GPU_VERTEXELEMENTFORMAT_INVALID;
+  }
   }
 }
 
@@ -103,8 +108,10 @@ struct PEVertexAttribute {
     case ShaderDataType::Int4:
       return 4;
 
-    default:
+    default: {
+      PE_ASSERT(false, "Unknown ShaderDataType");
       return 0;
+    }
     }
   }
 };
