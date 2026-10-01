@@ -19,7 +19,7 @@ Application::~Application() { Terminate(); }
 void Application::Run() {
   m_IsRunning = true;
 
-  OnCreated();
+  OnStart();
 
   auto lastTime = std::chrono::high_resolution_clock::now();
 

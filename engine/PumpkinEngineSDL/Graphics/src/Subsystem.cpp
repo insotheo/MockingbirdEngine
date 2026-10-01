@@ -1,27 +1,10 @@
 #include "Subsystem.hpp"
 
-#include "GraphicsHandle.hpp"
-#include "VertexLayout.hpp"
-#include <Core/FileSys.hpp>
 #include <Core/Log.hpp>
-#include <cstddef>
-#include <cstdint>
-#include <span>
-#include <vector>
-
-Pumpkin::SDL::Graphics::VertexLayout
-    layout({Pumpkin::SDL::Graphics::PEVertexAttribute(
-                Pumpkin::SDL::Graphics::ShaderDataType::Float2, "inPos"),
-            Pumpkin::SDL::Graphics::PEVertexAttribute(
-                Pumpkin::SDL::Graphics::ShaderDataType::Float3, "inColor")});
-
-Pumpkin::SDL::Graphics::ShaderHandle shader;
-Pumpkin::SDL::Graphics::MeshHandle mesh;
-Pumpkin::SDL::Graphics::PipelineHandle pipeline;
 
 namespace Pumpkin::SDL::Graphics {
 
-void PESDLGraphiscSubsystem::OnBegin() {
+void PESDLGraphicsSubsystem::OnBegin() {
   if (!SDL_WasInit(SDL_INIT_VIDEO) || !m_Window) {
     PE_LOG_CORE_ERROR("SDL3 Video or Window subsystems wern't initialized "
                       "before adding graphics subsystem");
@@ -33,44 +16,11 @@ void PESDLGraphiscSubsystem::OnBegin() {
     PE_LOG_CORE_ERROR("Failed to create Renderer!");
     return;
   }
-
-  // DBG
-  std::vector<std::byte> vertCode =
-      Pumpkin::Core::LoadFileBytes("./triangle.vert.spv");
-  std::vector<std::byte> fragCode =
-      Pumpkin::Core::LoadFileBytes("./triangle.frag.spv");
-
-  shader = m_Renderer.CreateShader(vertCode, fragCode, {});
-  pipeline = m_Renderer.CreateGraphicsPipeline(shader, layout);
-
-  std::vector<float> verticies = {
-      // clang-format off
-    -0.75f, 0.75f,     1.0f, 0.0f, 0.0f,
-    -0.75f, -0.75f,   0.0f, 1.0f, 0.0f,
-    0.75f, -0.75f, 0.0f, 0.0f, 1.0f,
-    0.75f, 0.75f, 0.3f, 0.5f, 0.5f,
-      // clang-format on
-  };
-  std::vector<uint16_t> indicies = {0, 1, 2, 2, 3, 0};
-
-  mesh = m_Renderer.CreateMesh(
-      std::as_bytes(std::span(verticies)), layout.GetStride(),
-      std::as_bytes(std::span(indicies)), sizeof(uint16_t));
-
-  m_Renderer.SetClearColor(0.2f, 1.f, 0.4f);
 }
 
-void PESDLGraphiscSubsystem::OnUpdate(const Core::Time &time) {} // DBG
-
-void PESDLGraphiscSubsystem::OnShutdown() {
+void PESDLGraphicsSubsystem::OnShutdown() {
   m_Renderer.Shutdown();
   m_Window = nullptr;
-}
-
-void PESDLGraphiscSubsystem::OnRender() {
-  m_Renderer.BeginDraw2D();
-  m_Renderer.DrawMesh(mesh, pipeline);
-  m_Renderer.EndDraw2D();
 }
 
 } // namespace Pumpkin::SDL::Graphics

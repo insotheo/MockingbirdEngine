@@ -10,7 +10,7 @@ public:
   Application();
   virtual ~Application();
 
-  virtual void OnCreated() {}
+  virtual void OnStart() {}
   void Run();
   void Shutdown();
 
