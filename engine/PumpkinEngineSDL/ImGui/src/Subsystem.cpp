@@ -35,8 +35,6 @@ void PESDLImGui::OnUpdate(const Core::Time &time) {
   ImGui_ImplSDLGPU3_NewFrame();
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
-
-  ImGui::ShowDemoWindow();
 }
 
 void PESDLImGui::OnRender() {
@@ -44,8 +42,10 @@ void PESDLImGui::OnRender() {
     return;
 
   SDL_GPUCommandBuffer *cmdBuff = m_Renderer->GetGPUCurrentCommandBuffer();
-  if (!cmdBuff)
+  if (!cmdBuff) {
+    ImGui::EndFrame();
     return;
+  }
 
   ImGui::Render();
   ImGui_ImplSDLGPU3_PrepareDrawData(ImGui::GetDrawData(), cmdBuff);

@@ -2,6 +2,7 @@
 #include <PumpkinEngineCore.hpp>
 #include <PumpkinEngineSDLGraphics.hpp>
 #include <PumpkinEngineSDLWindowing.hpp>
+#include <imgui.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -38,13 +39,12 @@ public:
 
     std::vector<float> verticies = {
         // clang-format off
-        -0.75f, 0.75f,     1.0f, 0.0f, 0.0f,
+        0.0f, 0.75f,     1.0f, 0.0f, 0.0f,
         -0.75f, -0.75f,   0.0f, 1.0f, 0.0f,
         0.75f, -0.75f, 0.0f, 0.0f, 1.0f,
-        0.75f, 0.75f, 0.3f, 0.5f, 0.5f,
         // clang-format on
     };
-    std::vector<uint16_t> indicies = {0, 1, 2, 2, 3, 0};
+    std::vector<uint16_t> indicies = {0, 1, 2};
 
     mesh = graphics->GetRenderer().CreateMesh(
         std::as_bytes(std::span(verticies)), layout.GetStride(),
@@ -52,11 +52,20 @@ public:
 
     graphics->GetRenderer().SetClearColor(0.2f, 1.f, 0.4f);
   }
+
+  void OnUpdate(const Core::Time &time) override {
+    ImGui::Begin("FPS counter");
+    ImGui::Text("FPS: %f",
+                static_cast<int>(1.f / time.DeltaTime * 100) / 100.f);
+    ImGui::End();
+  }
+
   void OnRender() override {
     graphics->GetRenderer().BeginDraw2D();
     graphics->GetRenderer().DrawMesh(mesh, pipeline);
     graphics->GetRenderer().EndDraw2D();
   }
+
   void OnShutdown() override {}
 };
 
