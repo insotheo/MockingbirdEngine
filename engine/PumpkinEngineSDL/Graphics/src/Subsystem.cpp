@@ -1,5 +1,6 @@
 #include "Subsystem.hpp"
 
+#include <Core/Application.hpp>
 #include <Core/Log.hpp>
 
 namespace Pumpkin::SDL::Graphics {
@@ -16,6 +17,9 @@ void PESDLGraphicsSubsystem::OnBegin() {
     PE_LOG_CORE_ERROR("Failed to create Renderer!");
     return;
   }
+
+  Core::Application::GetApp()->SetRenderCallbacks(
+      [&]() { m_Renderer.StartFrame(); }, [&]() { m_Renderer.EndFrame(); });
 }
 
 void PESDLGraphicsSubsystem::OnShutdown() {

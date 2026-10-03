@@ -17,6 +17,15 @@ public:
 
   inline bool IsCreatedSuccessfully() const { return m_Device; }
 
+  // For third-party api's! Not recomended to call in engine
+  inline SDL_GPUDevice *GetGPU() const { return m_Device; }
+  inline SDL_GPUCommandBuffer *GetGPUCurrentCommandBuffer() const {
+    return m_CurrentCmdBuff;
+  }
+  inline SDL_GPURenderPass *GetGPUCurrentRenderPass() const {
+    return m_CurrentRenderPass;
+  }
+
   void Init(SDL_Window *wnd);
   void Shutdown();
 
@@ -40,6 +49,9 @@ public:
   inline void SetClearColor(float r, float g, float b, float alpha = 1.0f) {
     m_ClearColor = SDL_FColor{r, g, b, alpha};
   }
+
+  void StartFrame();
+  void EndFrame();
 
   // 2D rendering
   void BeginDraw2D(); // TODO: camera2D and target texture
@@ -82,6 +94,7 @@ private:
 
   bool m_VSync = true;
   bool m_IsDrawing = false;
+  bool m_FirstPassInFrame = false;
 
   // resources
   std::vector<MeshInternal> m_Meshes;

@@ -310,15 +310,11 @@ void Renderer::DrawMesh(const MeshHandle &meshHnd, PipelineHandle pipelineHnd) {
                                0);
 }
 
-void Renderer::BeginDraw2D() {
-  if (m_IsDrawing)
-    return;
-
+void Renderer::StartFrame() {
   m_CurrentCmdBuff = SDL_AcquireGPUCommandBuffer(m_Device);
   if (!m_CurrentCmdBuff)
     return;
 
-  // TODO framebuffer
   bool success = SDL_AcquireGPUSwapchainTexture(
       m_CurrentCmdBuff, m_Wnd, &m_CurrentTargetTexture, nullptr, nullptr);
   if (!success || !m_CurrentTargetTexture) {
@@ -327,15 +323,33 @@ void Renderer::BeginDraw2D() {
     return;
   }
 
+  m_FirstPassInFrame = true;
+}
+
+void Renderer::EndFrame() {
+  if (m_CurrentCmdBuff) {
+    SDL_SubmitGPUCommandBuffer(m_CurrentCmdBuff);
+    m_CurrentCmdBuff = nullptr;
+  }
+  m_CurrentTargetTexture = nullptr;
+}
+
+void Renderer::BeginDraw2D() {
+  if (m_IsDrawing || !m_CurrentCmdBuff)
+    return;
+
   SDL_GPUColorTargetInfo colorTargetInfo{};
   colorTargetInfo.texture = m_CurrentTargetTexture;
   colorTargetInfo.clear_color = m_ClearColor;
-  colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+  colorTargetInfo.load_op =
+      m_FirstPassInFrame ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
   colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
 
   m_CurrentRenderPass =
       SDL_BeginGPURenderPass(m_CurrentCmdBuff, &colorTargetInfo, 1, nullptr);
+
   m_IsDrawing = true;
+  m_FirstPassInFrame = false;
 }
 
 void Renderer::EndDraw2D() {
@@ -347,12 +361,6 @@ void Renderer::EndDraw2D() {
     m_CurrentRenderPass = nullptr;
   }
 
-  if (m_CurrentCmdBuff) {
-    SDL_SubmitGPUCommandBuffer(m_CurrentCmdBuff);
-    m_CurrentCmdBuff = nullptr;
-  }
-
-  m_CurrentTargetTexture = nullptr;
   m_IsDrawing = false;
 }
 

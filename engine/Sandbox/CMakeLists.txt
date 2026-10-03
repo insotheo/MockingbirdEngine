@@ -11,6 +11,7 @@ target_link_libraries(Sandbox
         PumpkinEngineCore
         PumpkinEngineSDLWindowing
         PumpkinEngineSDLGraphics
+        PumpkinEngineSDLDearImGui
 )
 
 #ASSETS

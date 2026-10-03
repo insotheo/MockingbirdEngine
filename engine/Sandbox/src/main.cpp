@@ -1,3 +1,4 @@
+#include <PumkinEngineSDLDearImGui.hpp>
 #include <PumpkinEngineCore.hpp>
 #include <PumpkinEngineSDLGraphics.hpp>
 #include <PumpkinEngineSDLWindowing.hpp>
@@ -74,6 +75,9 @@ class SandboxApplication : public Core::Application {
             wnd->GetSDLWindow());
     graphics = GetSubsystemManager()
                    .GetSubsystem<SDL::Graphics::PESDLGraphicsSubsystem>();
+
+    GetSubsystemManager().RegisterSubsystem<SDL::DearImGui::PESDLImGui>(
+        wnd->GetSDLWindow(), &graphics->GetRenderer());
 
     GetSubsystemManager().RegisterSubsystem<SandboxSubsystem>();
   }

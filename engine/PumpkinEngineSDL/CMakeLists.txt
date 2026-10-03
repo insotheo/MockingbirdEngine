@@ -16,3 +16,4 @@ FetchContent_MakeAvailable(SDL3)
 
 add_subdirectory(Windowing)
 add_subdirectory(Graphics)
+add_subdirectory(ImGui)
