@@ -31,37 +31,47 @@ void PESDLWindowingSubsystem::OnUpdate(const Core::Time &time) {
   while (SDL_PollEvent(&event)) {
     if (event.type == SDL_EVENT_QUIT) {
       Core::WindowCloseEvent close;
+      close.NativeEvent = &event;
       m_App->PostEvent(close);
       if (!close.Handled)
         m_App->Shutdown();
     } else if (event.type == SDL_EVENT_WINDOW_RESIZED) {
       Core::WindowResizeEvent resize(static_cast<uint32_t>(event.window.data1),
                                      static_cast<uint32_t>(event.window.data2));
+      resize.NativeEvent = &event;
       m_App->PostEvent(resize);
     } else if (event.type == SDL_EVENT_WINDOW_MOVED) {
       Core::WindowMoveEvent move(static_cast<uint32_t>(event.window.data1),
                                  static_cast<uint32_t>(event.window.data2));
+      move.NativeEvent = &event;
       m_App->PostEvent(move);
     } else if (event.type == SDL_EVENT_KEY_DOWN) {
       Core::KeyPressedEvent pressed(event.key.scancode);
+      pressed.NativeEvent = &event;
       m_App->PostEvent(pressed);
     } else if (event.type == SDL_EVENT_TEXT_INPUT) {
       Core::KeyTypedEvent typed(*event.text.text);
+      typed.NativeEvent = &event;
       m_App->PostEvent(typed);
     } else if (event.type == SDL_EVENT_KEY_UP) {
       Core::KeyReleasedEvent released(event.key.scancode);
+      released.NativeEvent = &event;
       m_App->PostEvent(released);
     } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
       Core::MouseButtonPressedEvent pressed(event.button.button);
+      pressed.NativeEvent = &event;
       m_App->PostEvent(pressed);
     } else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
       Core::MouseButtonReleasedEvent released(event.button.button);
+      released.NativeEvent = &event;
       m_App->PostEvent(released);
     } else if (event.type == SDL_EVENT_MOUSE_MOTION) {
       Core::MouseMovedEvent move(event.motion.x, event.motion.y);
+      move.NativeEvent = &event;
       m_App->PostEvent(move);
     } else if (event.type == SDL_EVENT_MOUSE_WHEEL) {
       Core::MouseScrollEvent scroll(event.wheel.x, event.wheel.y);
+      scroll.NativeEvent = &event;
       m_App->PostEvent(scroll);
     }
   }

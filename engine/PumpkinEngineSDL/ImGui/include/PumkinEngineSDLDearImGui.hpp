@@ -18,7 +18,7 @@ public:
 
   void OnBegin() override;
   void OnShutdown() override;
-  //   void OnEvent(Core::Event &event) override;
+  void OnEvent(Core::Event &event) override;
   void OnUpdate(const Core::Time &time) override;
   void OnRender() override;
 

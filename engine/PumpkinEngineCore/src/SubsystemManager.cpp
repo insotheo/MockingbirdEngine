@@ -13,7 +13,7 @@ void SubsystemManager::RenderAll() {
 }
 
 void SubsystemManager::OnEventAll(Event &event) {
-  for (auto it = m_Subsystems.rbegin(); it != m_Subsystems.rend(); ++it) {
+  for (auto it = m_Subsystems.begin(); it != m_Subsystems.end(); ++it) {
     if (event.Handled)
       break;
     (*it)->OnEvent(event);

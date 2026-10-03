@@ -1,4 +1,5 @@
 #include "Event/KeyboardEvent.hpp"
+#include "Event/MouseEvent.hpp"
 #include <PumkinEngineSDLDearImGui.hpp>
 #include <PumpkinEngineCore.hpp>
 #include <PumpkinEngineSDLGraphics.hpp>
@@ -25,6 +26,8 @@ SDL::Graphics::ShaderHandle shader;
 SDL::Graphics::MeshHandle mesh;
 SDL::Graphics::PipelineHandle pipeline;
 
+float bgR = 0.2f, bgG = 1.f, bgB = 0.4f;
+
 class SandboxSubsystem : public Core::PESubsystem {
 public:
   void OnBegin() override {
@@ -50,14 +53,16 @@ public:
     mesh = graphics->GetRenderer().CreateMesh(
         std::as_bytes(std::span(verticies)), layout.GetStride(),
         std::as_bytes(std::span(indicies)), sizeof(uint16_t));
-
-    graphics->GetRenderer().SetClearColor(0.2f, 1.f, 0.4f);
   }
 
   void OnUpdate(const Core::Time &time) override {
     ImGui::Begin("FPS counter");
-    ImGui::Text("FPS: %f",
-                static_cast<int>(1.f / time.DeltaTime * 100) / 100.f);
+    ImGui::Text("FPS: %.2f", 1.f / time.DeltaTime);
+    ImGui::End();
+
+    ImGui::Begin("Background color");
+    ImGui::ColorPicker3("Bg", &bgR);
+    graphics->GetRenderer().SetClearColor(bgR, bgG, bgB);
     ImGui::End();
   }
 
@@ -71,7 +76,9 @@ public:
     Core::EventDispatcher dispatcher(event);
 
     dispatcher.Dispatch<Core::KeyPressedEvent>(
-        [&](const Core::KeyPressedEvent &e) {
+        [&](Core::KeyPressedEvent &e) { PE_LOG_INFO("{}", e.ToString()); });
+    dispatcher.Dispatch<Core::MouseButtonPressedEvent>(
+        [&](Core::MouseButtonPressedEvent &e) {
           PE_LOG_INFO("{}", e.ToString());
         });
   }

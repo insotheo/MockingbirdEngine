@@ -56,6 +56,31 @@ void PESDLImGui::OnRender() {
   m_Renderer->EndDraw2D();
 }
 
+void PESDLImGui::OnEvent(Core::Event &event) {
+  if (!m_Initialized || !event.NativeEvent)
+    return;
+
+  const SDL_Event *sdlEvent = static_cast<const SDL_Event *>(event.NativeEvent);
+
+  ImGui_ImplSDL3_ProcessEvent(sdlEvent);
+
+  ImGuiIO &io = ImGui::GetIO();
+
+  if ((sdlEvent->type == SDL_EVENT_KEY_DOWN ||
+       sdlEvent->type == SDL_EVENT_KEY_UP) &&
+      io.WantCaptureKeyboard) {
+    event.Handled = true;
+  }
+  if (sdlEvent->type == SDL_EVENT_TEXT_INPUT && io.WantTextInput) {
+    event.Handled = true;
+  }
+  if ((sdlEvent->type >= SDL_EVENT_MOUSE_MOTION &&
+       sdlEvent->type <= SDL_EVENT_MOUSE_WHEEL) &&
+      io.WantCaptureMouse) {
+    event.Handled = true;
+  }
+}
+
 void PESDLImGui::OnShutdown() {
   if (!m_Initialized)
     return;

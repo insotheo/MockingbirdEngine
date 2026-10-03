@@ -13,6 +13,7 @@ public:
   virtual uint32_t GetTypeID() const = 0;
 
   bool Handled = false;
+  const void *NativeEvent = nullptr;
 };
 
 class EventTypeCounter {
