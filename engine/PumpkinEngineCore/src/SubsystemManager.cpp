@@ -8,8 +8,15 @@ void SubsystemManager::UpdateAll(const Time &time) {
 }
 
 void SubsystemManager::RenderAll() {
-  for (auto &system : m_Subsystems)
-    system->OnRender();
+  for (auto &system : m_Subsystems) {
+    if (system.get()->GetRenderOrder() == RenderOrder::Regular)
+      system->OnRender();
+  }
+
+  for (auto &system : m_Subsystems) { // UI on top
+    if (system.get()->GetRenderOrder() == RenderOrder::UI)
+      system->OnRender();
+  }
 }
 
 void SubsystemManager::OnEventAll(Event &event) {

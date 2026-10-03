@@ -30,6 +30,8 @@ float bgR = 0.2f, bgG = 1.f, bgB = 0.4f;
 
 class SandboxSubsystem : public Core::PESubsystem {
 public:
+  SandboxSubsystem() { m_RenderOrder = Core::RenderOrder::Regular; }
+
   void OnBegin() override {
     PE_LOG_INFO("Game started");
 
@@ -56,13 +58,13 @@ public:
   }
 
   void OnUpdate(const Core::Time &time) override {
-    ImGui::Begin("FPS counter");
-    ImGui::Text("FPS: %.2f", 1.f / time.DeltaTime);
-    ImGui::End();
+    ImGui::Begin("Menu");
 
-    ImGui::Begin("Background color");
+    ImGui::Text("FPS: %.2f", 1.f / time.DeltaTime);
+
     ImGui::ColorPicker3("Bg", &bgR);
     graphics->GetRenderer().SetClearColor(bgR, bgG, bgB);
+
     ImGui::End();
   }
 

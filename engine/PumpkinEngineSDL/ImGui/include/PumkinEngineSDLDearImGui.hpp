@@ -10,7 +10,9 @@ namespace Pumpkin::SDL::DearImGui {
 class PESDLImGui : public Core::PESubsystem {
 public:
   PESDLImGui(SDL_Window *window, Graphics::Renderer *renderer)
-      : m_Wnd(window), m_Renderer(renderer), m_Gpu(renderer->GetGPU()) {}
+      : m_Wnd(window), m_Renderer(renderer), m_Gpu(renderer->GetGPU()) {
+    m_RenderOrder = Core::RenderOrder::UI;
+  }
   ~PESDLImGui() {
     m_Wnd = nullptr;
     m_Gpu = nullptr;
