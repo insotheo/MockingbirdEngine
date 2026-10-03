@@ -1,3 +1,4 @@
+#include "Event/KeyboardEvent.hpp"
 #include <PumkinEngineSDLDearImGui.hpp>
 #include <PumpkinEngineCore.hpp>
 #include <PumpkinEngineSDLGraphics.hpp>
@@ -64,6 +65,15 @@ public:
     graphics->GetRenderer().BeginDraw2D();
     graphics->GetRenderer().DrawMesh(mesh, pipeline);
     graphics->GetRenderer().EndDraw2D();
+  }
+
+  void OnEvent(Core::Event &event) override {
+    Core::EventDispatcher dispatcher(event);
+
+    dispatcher.Dispatch<Core::KeyPressedEvent>(
+        [&](const Core::KeyPressedEvent &e) {
+          PE_LOG_INFO("{}", e.ToString());
+        });
   }
 
   void OnShutdown() override {}

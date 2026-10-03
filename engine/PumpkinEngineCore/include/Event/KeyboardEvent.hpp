@@ -19,6 +19,20 @@ private:
   uint32_t m_Code;
 };
 
+class PE_EVENT(KeyTypedEvent) {
+public:
+  KeyTypedEvent(char ch) : m_Ch(ch) {}
+
+  inline char GetChar() const { return m_Ch; }
+
+  inline std::string ToString() const override {
+    return std::format("Key typed event(utf-8: {})", m_Ch);
+  }
+
+private:
+  char m_Ch;
+};
+
 class PE_EVENT(KeyReleasedEvent) {
 public:
   KeyReleasedEvent(uint32_t keycode) : m_Code(keycode) {}
