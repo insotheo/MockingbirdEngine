@@ -42,9 +42,9 @@ public:
     ME_LOG_INFO("Game started");
 
     std::vector<std::byte> vertCode =
-        Core::LoadFileBytes("./triangle.vert.spv");
+        Core::LoadFileBytes("./assets/hello.vert.spv");
     std::vector<std::byte> fragCode =
-        Core::LoadFileBytes("./triangle.frag.spv");
+        Core::LoadFileBytes("./assets/hello.frag.spv");
 
     shader = graphics->GetRenderer().CreateShader(
         vertCode, fragCode, {.Fragment = {.UniformBufferCount = 1}});
