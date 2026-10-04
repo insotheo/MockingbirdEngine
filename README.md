@@ -8,3 +8,4 @@ A simple game engine made for nothing but fun
 
 - [OpenGL Mathematics (GLM)](https://github.com/g-truc/glm.git)
 - [Simple Directmedia Layer (SDL)](https://www.libsdl.org/)
+- [Dear ImGui](https://github.com/ocornut/imgui)
