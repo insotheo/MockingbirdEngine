@@ -1,0 +1,21 @@
+#pragma once
+
+#include <cstdint>
+#include <string>
+
+namespace Mockingbird::SDL::Graphics {
+
+struct ShaderStageDesc {
+  uint32_t SamplerCount = 0;
+  uint32_t StorageBufferCount = 0;
+  uint32_t StorageTextureCount = 0;
+  uint32_t UniformBufferCount = 0;
+  std::string EntryPoint = "main";
+};
+
+struct ShaderProgramDesc {
+  ShaderStageDesc Vertex{};
+  ShaderStageDesc Fragment{};
+};
+
+} // namespace Mockingbird::SDL::Graphics
