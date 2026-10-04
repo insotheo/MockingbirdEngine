@@ -8,9 +8,12 @@ struct PEGraphicsHandle {
 
   inline uint32_t GetIndex() const { return (uint32_t)(Id & 0xFFFFFFFF); }
   inline uint32_t GetVersion() const { return (uint32_t)(Id >> 32); }
+
+  explicit operator bool() const noexcept { return Id != 0; }
 };
 
 using ShaderHandle = PEGraphicsHandle;
+using MaterialHandle = PEGraphicsHandle;
 using MeshHandle = PEGraphicsHandle;
 using PipelineHandle = uint32_t;
 

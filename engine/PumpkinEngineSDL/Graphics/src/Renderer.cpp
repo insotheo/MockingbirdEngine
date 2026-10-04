@@ -45,6 +45,7 @@ void Renderer::Shutdown() {
       SDL_ReleaseGPUGraphicsPipeline(m_Device, pipeline);
   }
   m_Pipelines.clear();
+  m_Materials.clear();
 
   for (auto &internalShader : m_Shaders) {
     if (internalShader.VertexShader)
@@ -236,7 +237,7 @@ ShaderHandle Renderer::CreateShader(std::span<const std::byte> vert,
 }
 
 PipelineHandle Renderer::CreateGraphicsPipeline(const ShaderHandle &shader,
-                                                const VertexLayout &layout) {
+                                                const BufferLayout &layout) {
   ShaderInternal &targetShader = m_Shaders[shader.GetIndex()];
 
   SDL_GPUGraphicsPipelineCreateInfo pipelineInfo{};
@@ -289,11 +290,17 @@ PipelineHandle Renderer::CreateGraphicsPipeline(const ShaderHandle &shader,
   return static_cast<uint32_t>(m_Pipelines.size() - 1);
 }
 
-void Renderer::DrawMesh(const MeshHandle &meshHnd, PipelineHandle pipelineHnd) {
+void Renderer::DrawMesh(const MeshHandle &meshHnd, const MaterialHandle &matHnd,
+                        PipelineHandle pipelineHnd) {
   if (!m_IsDrawing || !m_CurrentRenderPass ||
       meshHnd.GetIndex() >= m_Meshes.size() ||
       pipelineHnd >= m_Pipelines.size())
     return;
+
+  if (matHnd) {
+    if (matHnd.GetIndex() >= m_Materials.size())
+      return;
+  }
 
   const MeshInternal &mesh = m_Meshes[meshHnd.GetIndex()];
   SDL_GPUGraphicsPipeline *pipeline = m_Pipelines[pipelineHnd];
@@ -305,6 +312,15 @@ void Renderer::DrawMesh(const MeshHandle &meshHnd, PipelineHandle pipelineHnd) {
 
   SDL_GPUBufferBinding indBind{.buffer = mesh.IndexBuffer, .offset = 0};
   SDL_BindGPUIndexBuffer(m_CurrentRenderPass, &indBind, mesh.IndexFormat);
+
+  if (matHnd) {
+    const MaterialInternal &mat = m_Materials[matHnd.GetIndex()];
+    if (!mat.UniformCPUBuffer.empty()) {
+      SDL_PushGPUFragmentUniformData(
+          m_CurrentCmdBuff, mat.Binding, mat.UniformCPUBuffer.data(),
+          static_cast<uint32_t>(mat.UniformCPUBuffer.size()));
+    }
+  }
 
   SDL_DrawGPUIndexedPrimitives(m_CurrentRenderPass, mesh.IndexCount, 1, 0, 0,
                                0);

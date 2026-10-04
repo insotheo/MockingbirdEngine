@@ -1,5 +1,5 @@
-#include "Event/KeyboardEvent.hpp"
-#include "Event/MouseEvent.hpp"
+#include <Event/KeyboardEvent.hpp>
+#include <Event/MouseEvent.hpp>
 #include <PumkinEngineSDLDearImGui.hpp>
 #include <PumpkinEngineCore.hpp>
 #include <PumpkinEngineSDLGraphics.hpp>
@@ -16,17 +16,23 @@ using namespace Pumpkin;
 SDL::Windowing::PESDLWindowingSubsystem *wnd;
 SDL::Graphics::PESDLGraphicsSubsystem *graphics;
 
-SDL::Graphics::VertexLayout
-    layout({Pumpkin::SDL::Graphics::PEVertexAttribute(
-                Pumpkin::SDL::Graphics::ShaderDataType::Float2, "inPos"),
-            Pumpkin::SDL::Graphics::PEVertexAttribute(
-                Pumpkin::SDL::Graphics::ShaderDataType::Float3, "inColor")});
+SDL::Graphics::BufferLayout layout({SDL::Graphics::PEBufferAttribute(
+    SDL::Graphics::ShaderDataType::Float2, "vPos")});
+
+SDL::Graphics::BufferLayout matLayout(
+    {SDL::Graphics::PEBufferAttribute(SDL::Graphics::ShaderDataType::Float3,
+                                      "uColor"),
+     SDL::Graphics::PEBufferAttribute(SDL::Graphics::ShaderDataType::Float,
+                                      "uTime")},
+    SDL::Graphics::LayoutType::UniformStd140);
 
 SDL::Graphics::ShaderHandle shader;
+SDL::Graphics::MaterialHandle mat;
 SDL::Graphics::MeshHandle mesh;
 SDL::Graphics::PipelineHandle pipeline;
 
 float bgR = 0.2f, bgG = 1.f, bgB = 0.4f;
+Core::PEVec3 trColor{1.0f, 1.0f, 1.0f};
 
 class SandboxSubsystem : public Core::PESubsystem {
 public:
@@ -40,14 +46,16 @@ public:
     std::vector<std::byte> fragCode =
         Core::LoadFileBytes("./triangle.frag.spv");
 
-    shader = graphics->GetRenderer().CreateShader(vertCode, fragCode, {});
+    shader = graphics->GetRenderer().CreateShader(
+        vertCode, fragCode, {.Fragment = {.UniformBufferCount = 1}});
     pipeline = graphics->GetRenderer().CreateGraphicsPipeline(shader, layout);
+    mat = graphics->GetRenderer().CreateMaterial(pipeline, matLayout);
 
     std::vector<float> verticies = {
         // clang-format off
-        0.0f, 0.75f,     1.0f, 0.0f, 0.0f,
-        -0.75f, -0.75f,   0.0f, 1.0f, 0.0f,
-        0.75f, -0.75f, 0.0f, 0.0f, 1.0f,
+        0.0f, 0.5f,
+        -0.5f, -0.5f,
+        0.5f, -0.5f
         // clang-format on
     };
     std::vector<uint16_t> indicies = {0, 1, 2};
@@ -65,12 +73,17 @@ public:
     ImGui::ColorPicker3("Bg", &bgR);
     graphics->GetRenderer().SetClearColor(bgR, bgG, bgB);
 
+    ImGui::ColorPicker3("Triangle", &trColor.x);
+    graphics->GetRenderer().MaterialSetFloat3(mat, "uColor", trColor);
+    graphics->GetRenderer().MaterialSetFloat(
+        mat, "uTime", static_cast<float>(time.TotalTime));
+
     ImGui::End();
   }
 
   void OnRender() override {
     graphics->GetRenderer().BeginDraw2D();
-    graphics->GetRenderer().DrawMesh(mesh, pipeline);
+    graphics->GetRenderer().DrawMesh(mesh, mat, pipeline);
     graphics->GetRenderer().EndDraw2D();
   }
 

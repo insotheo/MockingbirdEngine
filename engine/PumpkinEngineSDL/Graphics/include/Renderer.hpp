@@ -1,12 +1,14 @@
 #pragma once
 
+#include "BufferLayout.hpp"
 #include "Descriptors.hpp"
 #include "GraphicsHandle.hpp"
-#include "VertexLayout.hpp"
+#include <Core/Math.hpp>
 #include <SDL3/SDL.h>
 #include <cstddef>
 #include <cstdint>
 #include <span>
+#include <unordered_map>
 #include <vector>
 
 namespace Pumpkin::SDL::Graphics {
@@ -42,13 +44,24 @@ public:
                             const ShaderProgramDesc &desc);
 
   PipelineHandle CreateGraphicsPipeline(const ShaderHandle &shader,
-                                        const VertexLayout &layout);
+                                        const BufferLayout &layout);
 
-  void DrawMesh(const MeshHandle &meshHnd, PipelineHandle pipelineHnd);
+  MaterialHandle CreateMaterial(PipelineHandle pipelineHnd,
+                                const BufferLayout &layout,
+                                uint32_t binding = 0);
+
+  void DrawMesh(const MeshHandle &meshHnd, const MaterialHandle &matHnd,
+                PipelineHandle pipelineHnd);
 
   inline void SetClearColor(float r, float g, float b, float alpha = 1.0f) {
     m_ClearColor = SDL_FColor{r, g, b, alpha};
   }
+
+  // material
+  void MaterialSetFloat(const MaterialHandle &hnd, const std::string &property,
+                        float val);
+  void MaterialSetFloat3(const MaterialHandle &hnd, const std::string &property,
+                         const Core::PEVec3 &val);
 
   void StartFrame();
   void EndFrame();
@@ -78,6 +91,14 @@ private:
     uint32_t Version;
   };
 
+  struct MaterialInternal {
+    PipelineHandle PipelineHnd;
+    std::vector<uint8_t> UniformCPUBuffer;
+    std::unordered_map<std::string, uint32_t> PropertyOffsets;
+    uint32_t Version;
+    uint32_t Binding = 0;
+  };
+
 private:
   SDL_GPUShader *CreateShaderStage(std::span<const std::byte> code,
                                    const ShaderStageDesc &desc,
@@ -99,6 +120,7 @@ private:
   // resources
   std::vector<MeshInternal> m_Meshes;
   std::vector<ShaderInternal> m_Shaders;
+  std::vector<MaterialInternal> m_Materials;
   std::vector<SDL_GPUGraphicsPipeline *> m_Pipelines;
 };
 } // namespace Pumpkin::SDL::Graphics

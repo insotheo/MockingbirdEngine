@@ -1,9 +1,13 @@
 #version 450
 
-layout(location = 0) out vec4 outColor;
+layout(location = 0) out vec4 fragColor;
 
-layout(location = 0) in vec3 aColor;
+layout(set = 3, binding = 0, std140) uniform MatBuffer{
+    vec3 uColor;
+    float uTime;
+};
 
 void main(){
-    outColor = vec4(aColor, 1.0);
+    vec3 blink = uColor * (sin(2 * uTime) * 0.5 + 0.5);
+    fragColor = vec4(blink, 1.0);
 }

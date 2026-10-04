@@ -20,6 +20,8 @@ enum class ShaderDataType {
   Int4,
 };
 
+enum class LayoutType { Vertex, UniformStd140 };
+
 static uint32_t ShaderDataTypeSize(ShaderDataType t) {
   switch (t) {
   case ShaderDataType::Float:
@@ -74,16 +76,16 @@ static SDL_GPUVertexElementFormat ShaderDataTypeToSDL(ShaderDataType t) {
   }
 }
 
-struct PEVertexAttribute {
+struct PEBufferAttribute {
   std::string Name;
   ShaderDataType Type;
   uint32_t Size;
   uint32_t Offset;
   bool Normalized;
 
-  PEVertexAttribute() {}
+  PEBufferAttribute() {}
 
-  PEVertexAttribute(ShaderDataType type, const std::string &name,
+  PEBufferAttribute(ShaderDataType type, const std::string &name,
                     bool normalized = false)
       : Name(name), Type(type), Size(ShaderDataTypeSize(type)), Offset(0),
         Normalized(normalized) {}
@@ -116,44 +118,77 @@ struct PEVertexAttribute {
   }
 };
 
-class VertexLayout {
+class BufferLayout {
 public:
-  VertexLayout() {}
+  BufferLayout() {}
 
-  VertexLayout(const std::initializer_list<PEVertexAttribute> &attribs)
+  BufferLayout(const std::initializer_list<PEBufferAttribute> &attribs,
+               LayoutType layoutType = LayoutType::Vertex)
       : m_Attributes(attribs) {
-    CalculateOffsetsAndStride();
+    CalculateOffsetsAndStride(layoutType);
   }
 
   inline uint32_t GetStride() const { return m_Stride; }
-  inline const std::vector<PEVertexAttribute> &GetAttributes() const {
+  inline const std::vector<PEBufferAttribute> &GetAttributes() const {
     return m_Attributes;
   }
 
-  std::vector<PEVertexAttribute>::iterator begin() {
+  std::vector<PEBufferAttribute>::iterator begin() {
     return m_Attributes.begin();
   }
-  std::vector<PEVertexAttribute>::iterator end() { return m_Attributes.end(); }
-  std::vector<PEVertexAttribute>::const_iterator begin() const {
+  std::vector<PEBufferAttribute>::iterator end() { return m_Attributes.end(); }
+  std::vector<PEBufferAttribute>::const_iterator begin() const {
     return m_Attributes.begin();
   }
-  std::vector<PEVertexAttribute>::const_iterator end() const {
+  std::vector<PEBufferAttribute>::const_iterator end() const {
     return m_Attributes.end();
   }
 
 private:
-  void CalculateOffsetsAndStride() {
+  void CalculateOffsetsAndStride(LayoutType type) {
     uint32_t offset = 0;
     m_Stride = 0;
+
     for (auto &attr : m_Attributes) {
+      if (type == LayoutType::UniformStd140) {
+        uint32_t alignment = 4;
+        switch (attr.Type) {
+        case ShaderDataType::Float2:
+        case ShaderDataType::Int2:
+          alignment = 8;
+          break;
+
+        case ShaderDataType::Float3:
+        case ShaderDataType::Float4:
+        case ShaderDataType::Int3:
+        case ShaderDataType::Int4:
+          alignment = 16;
+          break;
+
+        default:
+          break;
+        }
+
+        uint32_t remainder = offset % alignment;
+        if (remainder != 0) {
+          offset += (alignment - remainder);
+        }
+      }
       attr.Offset = offset;
       offset += attr.Size;
-      m_Stride += attr.Size;
     }
+
+    if (type == LayoutType::UniformStd140) {
+      uint32_t remainder = offset % 16;
+      if (remainder != 0) {
+        offset += (16 - remainder);
+      }
+    }
+    m_Stride = offset;
   }
 
 private:
-  std::vector<PEVertexAttribute> m_Attributes;
+  std::vector<PEBufferAttribute> m_Attributes;
   uint32_t m_Stride = 0;
 };
 
