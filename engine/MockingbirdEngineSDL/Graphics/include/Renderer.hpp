@@ -7,7 +7,6 @@
 #include <SDL3/SDL.h>
 #include <cstddef>
 #include <cstdint>
-#include <span>
 #include <unordered_map>
 #include <vector>
 
@@ -43,9 +42,8 @@ public:
   MeshHandle CreateMesh(VertexBufferHandle vertexBuffer,
                         IndexBufferHandle indexBuffer);
 
-  ShaderHandle CreateShader(std::span<const std::byte> vert,
-                            std::span<const std::byte> frag,
-                            const ShaderProgramDesc &desc);
+  ShaderHandle CreateShader(void *vert, size_t vertSize, void *frag,
+                            size_t fragSize, const ShaderProgramDesc &desc);
 
   PipelineHandle CreateGraphicsPipeline(ShaderHandle shader,
                                         const BufferLayout &layout);
@@ -114,7 +112,7 @@ private:
   };
 
 private:
-  SDL_GPUShader *CreateShaderStage(std::span<const std::byte> code,
+  SDL_GPUShader *CreateShaderStage(void *code, size_t codeSize,
                                    const ShaderStageDesc &desc,
                                    SDL_GPUShaderStage stage);
 

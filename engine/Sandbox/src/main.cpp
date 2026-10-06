@@ -6,9 +6,7 @@
 #include <MockingbirdEngineSDLWindowing.hpp>
 #include <imgui.h>
 
-#include <cstddef>
 #include <cstdint>
-#include <span>
 #include <vector>
 
 using namespace Mockingbird;
@@ -41,13 +39,14 @@ public:
   void OnBegin() override {
     ME_LOG_INFO("Game started");
 
-    std::vector<std::byte> vertCode =
+    std::vector<uint8_t> vertCode =
         Core::LoadFileBytes("./assets/hello.vert.spv");
-    std::vector<std::byte> fragCode =
+    std::vector<uint8_t> fragCode =
         Core::LoadFileBytes("./assets/hello.frag.spv");
 
     shader = graphics->GetRenderer().CreateShader(
-        vertCode, fragCode, {.Fragment = {.UniformBufferCount = 1}});
+        vertCode.data(), vertCode.size(), fragCode.data(), fragCode.size(),
+        {.Fragment = {.UniformBufferCount = 1}});
     pipeline = graphics->GetRenderer().CreateGraphicsPipeline(shader, layout);
     mat = graphics->GetRenderer().CreateMaterial(pipeline, matLayout);
 

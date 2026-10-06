@@ -4,7 +4,7 @@
 #include <fstream>
 
 namespace Mockingbird::Core {
-std::vector<std::byte> LoadFileBytes(const std::string &filepath) {
+std::vector<uint8_t> LoadFileBytes(const std::string &filepath) {
   std::ifstream file(filepath, std::ios::binary | std::ios::ate);
 
   if (!file.is_open()) {
@@ -14,7 +14,7 @@ std::vector<std::byte> LoadFileBytes(const std::string &filepath) {
 
   std::streamsize fileSize = file.tellg();
 
-  std::vector<std::byte> buffer(fileSize);
+  std::vector<uint8_t> buffer(fileSize);
 
   file.seekg(0, std::ios::beg);
   if (!file.read(reinterpret_cast<char *>(buffer.data()), fileSize)) {

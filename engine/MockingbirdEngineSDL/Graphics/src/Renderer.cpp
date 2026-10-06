@@ -210,12 +210,12 @@ MeshHandle Renderer::CreateMesh(VertexBufferHandle vertexBuffer,
   return CREATE_ME_GRAPHICS_HANDLE(mesh.Version, index);
 }
 
-SDL_GPUShader *Renderer::CreateShaderStage(std::span<const std::byte> code,
+SDL_GPUShader *Renderer::CreateShaderStage(void *code, size_t codeSize,
                                            const ShaderStageDesc &desc,
                                            SDL_GPUShaderStage stage) {
   SDL_GPUShaderCreateInfo info{};
-  info.code_size = code.size();
-  info.code = reinterpret_cast<const uint8_t *>(code.data());
+  info.code_size = codeSize;
+  info.code = reinterpret_cast<const uint8_t *>(code);
   info.entrypoint = desc.EntryPoint.empty() ? "main" : desc.EntryPoint.c_str();
   info.stage = stage;
   info.format = SDL_GPU_SHADERFORMAT_SPIRV; // TODO: multi shader type support
@@ -228,21 +228,21 @@ SDL_GPUShader *Renderer::CreateShaderStage(std::span<const std::byte> code,
   return SDL_CreateGPUShader(m_Device, &info);
 }
 
-ShaderHandle Renderer::CreateShader(std::span<const std::byte> vert,
-                                    std::span<const std::byte> frag,
+ShaderHandle Renderer::CreateShader(void *vert, size_t vertSize, void *frag,
+                                    size_t fragSize,
                                     const ShaderProgramDesc &desc) {
   if (!m_Device)
     return MEGraphicsHandleNull;
 
-  SDL_GPUShader *vertShader =
-      CreateShaderStage(vert, desc.Vertex, SDL_GPU_SHADERSTAGE_VERTEX);
+  SDL_GPUShader *vertShader = CreateShaderStage(vert, vertSize, desc.Vertex,
+                                                SDL_GPU_SHADERSTAGE_VERTEX);
   if (!vertShader) {
     ME_LOG_CORE_ERROR("Failed to create Vertex Shader: {}", SDL_GetError());
     return MEGraphicsHandleNull;
   }
 
-  SDL_GPUShader *fragShader =
-      CreateShaderStage(frag, desc.Fragment, SDL_GPU_SHADERSTAGE_FRAGMENT);
+  SDL_GPUShader *fragShader = CreateShaderStage(frag, fragSize, desc.Fragment,
+                                                SDL_GPU_SHADERSTAGE_FRAGMENT);
   if (!fragShader) {
     ME_LOG_CORE_ERROR("Failed to create Fragment Shader: {}", SDL_GetError());
     SDL_ReleaseGPUShader(m_Device, vertShader);

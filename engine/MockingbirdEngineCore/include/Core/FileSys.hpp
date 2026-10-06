@@ -1,9 +1,9 @@
 #pragma once
 
-#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
 namespace Mockingbird::Core {
-std::vector<std::byte> LoadFileBytes(const std::string &filepath);
+std::vector<uint8_t> LoadFileBytes(const std::string &filepath);
 }
