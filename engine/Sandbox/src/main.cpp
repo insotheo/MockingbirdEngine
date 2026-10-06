@@ -6,6 +6,7 @@
 #include <MockingbirdEngineSDLWindowing.hpp>
 #include <imgui.h>
 
+#include <cmath>
 #include <cstdint>
 #include <vector>
 
@@ -20,8 +21,10 @@ SDL::Graphics::BufferLayout layout({SDL::Graphics::MEBufferAttribute(
 SDL::Graphics::BufferLayout matLayout(
     {SDL::Graphics::MEBufferAttribute(SDL::Graphics::ShaderDataType::Float3,
                                       "uColor"),
-     SDL::Graphics::MEBufferAttribute(SDL::Graphics::ShaderDataType::Float,
-                                      "uTime")},
+     SDL::Graphics::MEBufferAttribute(SDL::Graphics::ShaderDataType::Float3,
+                                      "uBgColor"),
+     SDL::Graphics::MEBufferAttribute(SDL::Graphics::ShaderDataType::Mat4,
+                                      "uEffect")},
     SDL::Graphics::LayoutType::UniformStd140);
 
 SDL::Graphics::ShaderHandle shader;
@@ -31,6 +34,7 @@ SDL::Graphics::PipelineHandle pipeline;
 
 float bgR = 0.2f, bgG = 1.f, bgB = 0.4f;
 Core::MEVec3 rectColor{1.0f, 1.0f, 1.0f};
+Core::MEVec3 rectBgColor{0.0f, 0.0f, 0.0f};
 
 class SandboxSubsystem : public Core::MESubsystem {
 public:
@@ -52,10 +56,10 @@ public:
 
     float verticies[] = {
         // clang-format off
-        -0.5f, 0.5f,
-        -0.5f, -0.5f,
-        0.5f, -0.5f,
-        0.5f, 0.5f
+        -0.8f, 0.8f,
+        -0.8f, -0.8f,
+        0.8f, -0.8f,
+        0.8f, 0.8f
         // clang-format on
     };
     uint16_t indicies[] = {0, 1, 2, 2, 3, 0};
@@ -70,6 +74,18 @@ public:
   }
 
   void OnUpdate(const Core::Time &time) override {
+    Core::MEMat4 matrix(1.0f);
+
+    float angle = time.TotalTime * 0.5f;
+    matrix = Core::Math::Rotate(matrix, angle, Core::MEVec3(0.0f, 0.0f, 1.0f));
+
+    float scaleFactor = 1.0f + std::sin(time.TotalTime * 1.2f) * 0.4f;
+    matrix =
+        Core::Math::Scale(matrix, Core::MEVec3(scaleFactor, scaleFactor, 1.0f));
+
+    matrix[0][3] = std::sin(time.TotalTime * 2.0f) * 0.5f;
+    matrix[1][3] = std::cos(time.TotalTime * 1.5f) * 0.5f;
+
     ImGui::Begin("Menu");
 
     ImGui::Text("FPS: %.2f", 1.f / time.DeltaTime);
@@ -78,9 +94,11 @@ public:
     graphics->GetRenderer().SetClearColor(bgR, bgG, bgB);
 
     ImGui::ColorPicker3("Rectangle", &rectColor.x);
+    ImGui::ColorPicker3("Rectangle bg", &rectBgColor.x);
+
     graphics->GetRenderer().MaterialSetFloat3(mat, "uColor", rectColor);
-    graphics->GetRenderer().MaterialSetFloat(
-        mat, "uTime", static_cast<float>(time.TotalTime));
+    graphics->GetRenderer().MaterialSetFloat3(mat, "uBgColor", rectBgColor);
+    graphics->GetRenderer().MaterialSetMat4(mat, "uEffect", matrix);
 
     ImGui::End();
   }

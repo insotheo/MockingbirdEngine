@@ -18,6 +18,8 @@ enum class ShaderDataType {
   Int2,
   Int3,
   Int4,
+  Mat3,
+  Mat4,
 };
 
 enum class LayoutType { Vertex, UniformStd140 };
@@ -41,6 +43,12 @@ static uint32_t ShaderDataTypeSize(ShaderDataType t) {
     return 4 * 3;
   case ShaderDataType::Int4:
     return 4 * 4;
+
+  case ShaderDataType::Mat3:
+    return 4 * 3 * 3;
+
+  case ShaderDataType::Mat4:
+    return 4 * 4 * 4;
 
   default: {
     ME_ASSERT(false, "Unknown ShaderDataType");
@@ -110,6 +118,12 @@ struct MEBufferAttribute {
     case ShaderDataType::Int4:
       return 4;
 
+    case ShaderDataType::Mat3:
+      return 3 * 3;
+
+    case ShaderDataType::Mat4:
+      return 4 * 4;
+
     default: {
       ME_ASSERT(false, "Unknown ShaderDataType");
       return 0;
@@ -162,6 +176,8 @@ private:
         case ShaderDataType::Float4:
         case ShaderDataType::Int3:
         case ShaderDataType::Int4:
+        case ShaderDataType::Mat3:
+        case ShaderDataType::Mat4:
           alignment = 16;
           break;
 

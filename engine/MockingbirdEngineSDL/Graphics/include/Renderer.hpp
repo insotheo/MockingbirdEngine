@@ -62,8 +62,23 @@ public:
   // material
   void MaterialSetFloat(MaterialHandle hnd, const std::string &property,
                         float val);
+  void MaterialSetFloat2(MaterialHandle hnd, const std::string &property,
+                         const Core::MEVec2 &val);
   void MaterialSetFloat3(MaterialHandle hnd, const std::string &property,
                          const Core::MEVec3 &val);
+  void MaterialSetFloat4(MaterialHandle hnd, const std::string &property,
+                         const Core::MEVec4 &val);
+  void MaterialSetInt(MaterialHandle hnd, const std::string &property, int val);
+  void MaterialSetInt2(MaterialHandle hnd, const std::string &property,
+                       const Core::MEVec2i &val);
+  void MaterialSetInt3(MaterialHandle hnd, const std::string &property,
+                       const Core::MEVec3i &val);
+  void MaterialSetInt4(MaterialHandle hnd, const std::string &property,
+                       const Core::MEVec4i &val);
+  void MaterialSetMat3(MaterialHandle hnd, const std::string &property,
+                       const Core::MEMat3 &val);
+  void MaterialSetMat4(MaterialHandle hnd, const std::string &property,
+                       const Core::MEMat4 &val);
 
   void StartFrame();
   void EndFrame();

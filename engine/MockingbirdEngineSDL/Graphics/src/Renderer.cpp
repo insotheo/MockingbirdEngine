@@ -278,14 +278,31 @@ PipelineHandle Renderer::CreateGraphicsPipeline(ShaderHandle shader,
   std::vector<SDL_GPUVertexAttribute> sdlAttribs;
   uint32_t currLoc = 0;
 
-  // TODO: matrix as vec arrays
   for (const auto &attr : layout) {
-    SDL_GPUVertexAttribute sdlAttr{};
-    sdlAttr.location = currLoc++;
-    sdlAttr.buffer_slot = 0;
-    sdlAttr.format = ShaderDataTypeToSDL(attr.Type);
-    sdlAttr.offset = attr.Offset;
-    sdlAttribs.push_back(sdlAttr);
+    if (attr.Type == ShaderDataType::Mat4) {
+      for (int i = 0; i < 4; ++i) {
+        SDL_GPUVertexAttribute element{};
+        element.location = currLoc++;
+        element.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
+        element.offset = attr.Offset + (i * 16);
+        sdlAttribs.push_back(element);
+      }
+    } else if (attr.Type == ShaderDataType::Mat3) {
+      for (int i = 0; i < 3; ++i) {
+        SDL_GPUVertexAttribute element{};
+        element.location = currLoc++;
+        element.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
+        element.offset = attr.Offset + (i * 12);
+        sdlAttribs.push_back(element);
+      }
+    } else {
+      SDL_GPUVertexAttribute sdlAttr{};
+      sdlAttr.location = currLoc++;
+      sdlAttr.buffer_slot = 0;
+      sdlAttr.format = ShaderDataTypeToSDL(attr.Type);
+      sdlAttr.offset = attr.Offset;
+      sdlAttribs.push_back(sdlAttr);
+    }
   }
 
   SDL_GPUVertexInputState vertexInputState{};

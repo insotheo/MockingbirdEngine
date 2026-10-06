@@ -7,8 +7,12 @@
 namespace Mockingbird::Core {
 
 using MEVec2 = glm::vec2;
+using MEVec2i = glm::ivec2;
 using MEVec3 = glm::vec3;
+using MEVec3i = glm::ivec3;
 using MEVec4 = glm::vec4;
+using MEVec4i = glm::ivec4;
+using MEMat3 = glm::mat3;
 using MEMat4 = glm::mat4;
 
 namespace Math {
@@ -26,7 +30,12 @@ inline MEMat4 Scale(const MEMat4 &m, const MEVec3 &v) {
   return glm::scale(m, v);
 }
 
-inline const float *ValuePtr(const MEMat4 &m) { return glm::value_ptr(m); }
+inline MEMat4 Rotate(const MEMat4 &m, float angle, const MEVec3 &v) {
+  return glm::rotate(m, angle, v);
+}
+
+inline const float *ValuePtrMat3(const MEMat3 &m) { return glm::value_ptr(m); }
+inline const float *ValuePtrMat4(const MEMat4 &m) { return glm::value_ptr(m); }
 
 } // namespace Math
 
