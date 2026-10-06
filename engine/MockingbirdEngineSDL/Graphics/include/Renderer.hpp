@@ -34,23 +34,27 @@ public:
   void SetVSync(bool state);
   inline bool IsVSyncEnabled() const { return m_VSync; }
 
-  MeshHandle CreateMesh(std::span<const std::byte> verticies,
-                        uint32_t vertexStride,
-                        std::span<const std::byte> indicies,
-                        uint32_t indexStride);
+  VertexBufferHandle CreateVertexBuffer(void *vertices, uint32_t verticesCount,
+                                        uint32_t vertexStride);
+
+  IndexBufferHandle CreateIndexBuffer(void *indicies, uint32_t indicesCount,
+                                      uint32_t indexStride);
+
+  MeshHandle CreateMesh(VertexBufferHandle vertexBuffer,
+                        IndexBufferHandle indexBuffer);
 
   ShaderHandle CreateShader(std::span<const std::byte> vert,
                             std::span<const std::byte> frag,
                             const ShaderProgramDesc &desc);
 
-  PipelineHandle CreateGraphicsPipeline(const ShaderHandle &shader,
+  PipelineHandle CreateGraphicsPipeline(ShaderHandle shader,
                                         const BufferLayout &layout);
 
   MaterialHandle CreateMaterial(PipelineHandle pipelineHnd,
                                 const BufferLayout &layout,
                                 uint32_t binding = 0);
 
-  void DrawMesh(const MeshHandle &meshHnd, const MaterialHandle &matHnd,
+  void DrawMesh(MeshHandle meshHnd, MaterialHandle matHnd,
                 PipelineHandle pipelineHnd);
 
   inline void SetClearColor(float r, float g, float b, float alpha = 1.0f) {
@@ -58,9 +62,9 @@ public:
   }
 
   // material
-  void MaterialSetFloat(const MaterialHandle &hnd, const std::string &property,
+  void MaterialSetFloat(MaterialHandle hnd, const std::string &property,
                         float val);
-  void MaterialSetFloat3(const MaterialHandle &hnd, const std::string &property,
+  void MaterialSetFloat3(MaterialHandle hnd, const std::string &property,
                          const Core::MEVec3 &val);
 
   void StartFrame();
@@ -76,12 +80,22 @@ private:
   //   uint32_t Version;
   // };
 
-  struct MeshInternal {
-    SDL_GPUBuffer *VertexBuffer;
-    SDL_GPUBuffer *IndexBuffer;
-    uint32_t VertexCount;
-    uint32_t IndexCount;
+  struct VertexBufferInternal {
+    SDL_GPUBuffer *GPUBuffer = nullptr;
+    uint32_t Count;
+    uint32_t Version;
+  };
+
+  struct IndexBufferInternal {
+    SDL_GPUBuffer *GPUBuffer = nullptr;
+    uint32_t Count;
     SDL_GPUIndexElementSize IndexFormat;
+    uint32_t Version;
+  };
+
+  struct MeshInternal {
+    VertexBufferHandle VertexBuffer;
+    IndexBufferHandle IndexBuffer;
     uint32_t Version;
   };
 
@@ -104,6 +118,9 @@ private:
                                    const ShaderStageDesc &desc,
                                    SDL_GPUShaderStage stage);
 
+  SDL_GPUBuffer *UploadDataToGPU(const void *data, uint32_t byteSize,
+                                 SDL_GPUBufferUsageFlags usage);
+
 private:
   SDL_GPUDevice *m_Device = nullptr;
   SDL_Window *m_Wnd = nullptr;
@@ -118,6 +135,8 @@ private:
   bool m_FirstPassInFrame = false;
 
   // resources
+  std::vector<VertexBufferInternal> m_VBs;
+  std::vector<IndexBufferInternal> m_IBs;
   std::vector<MeshInternal> m_Meshes;
   std::vector<ShaderInternal> m_Shaders;
   std::vector<MaterialInternal> m_Materials;

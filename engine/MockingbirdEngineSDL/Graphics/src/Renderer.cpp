@@ -1,4 +1,5 @@
 #include "Renderer.hpp"
+#include "GraphicsHandle.hpp"
 
 #include <Core/Log.hpp>
 #include <cstring>
@@ -55,12 +56,16 @@ void Renderer::Shutdown() {
   }
   m_Shaders.clear();
 
-  for (auto &internalMesh : m_Meshes) {
-    if (internalMesh.VertexBuffer)
-      SDL_ReleaseGPUBuffer(m_Device, internalMesh.VertexBuffer);
-    if (internalMesh.IndexBuffer)
-      SDL_ReleaseGPUBuffer(m_Device, internalMesh.IndexBuffer);
+  for (auto &internalVb : m_VBs) {
+    if (internalVb.GPUBuffer)
+      SDL_ReleaseGPUBuffer(m_Device, internalVb.GPUBuffer);
   }
+  for (auto &internalIb : m_IBs) {
+    if (internalIb.GPUBuffer)
+      SDL_ReleaseGPUBuffer(m_Device, internalIb.GPUBuffer);
+  }
+  m_VBs.clear();
+  m_IBs.clear();
   m_Meshes.clear();
 
   if (m_Wnd && m_Device)
@@ -88,103 +93,120 @@ void Renderer::SetVSync(bool state) {
                    (state ? "ENABLED" : "DISABLED"));
 }
 
-MeshHandle Renderer::CreateMesh(std::span<const std::byte> verticies,
-                                uint32_t vertexStride,
-                                std::span<const std::byte> indicies,
-                                uint32_t indexStride) {
-  if (!m_Device || verticies.empty() || indicies.empty()) {
-    return MEGraphicsHandleNull;
-  }
+SDL_GPUBuffer *Renderer::UploadDataToGPU(const void *data, uint32_t byteSize,
+                                         SDL_GPUBufferUsageFlags usage) {
+  if (!m_Device || !data || byteSize == 0)
+    return nullptr;
 
-  const uint32_t vertexByteSize = static_cast<uint32_t>(verticies.size());
-  const uint32_t indexByteSize = static_cast<uint32_t>(indicies.size());
+  SDL_GPUBufferCreateInfo buffInfo{.usage = usage, .size = byteSize};
+  SDL_GPUBuffer *gpuBuff = SDL_CreateGPUBuffer(m_Device, &buffInfo);
+  if (!gpuBuff)
+    return nullptr;
 
-  SDL_GPUBufferCreateInfo vertBuffInfo{};
-  vertBuffInfo.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
-  vertBuffInfo.size = vertexByteSize;
-  SDL_GPUBuffer *vertBuff = SDL_CreateGPUBuffer(m_Device, &vertBuffInfo);
-
-  SDL_GPUBufferCreateInfo indBuffInfo{};
-  indBuffInfo.usage = SDL_GPU_BUFFERUSAGE_INDEX;
-  indBuffInfo.size = indexByteSize;
-  SDL_GPUBuffer *indBuff = SDL_CreateGPUBuffer(m_Device, &indBuffInfo);
-
-  if (!vertBuff || !indBuff) {
-    ME_LOG_CORE_ERROR("Failed to create GPU Buffers for mesh: {}",
-                      SDL_GetError());
-    if (vertBuff)
-      SDL_ReleaseGPUBuffer(m_Device, vertBuff);
-    if (indBuff)
-      SDL_ReleaseGPUBuffer(m_Device, indBuff);
-    return MEGraphicsHandleNull;
-  }
-
-  const uint32_t alignedVertexByteSize = (vertexByteSize + 3) & ~3;
-  const uint32_t totalTransferSize = alignedVertexByteSize + indexByteSize;
-
-  SDL_GPUTransferBufferCreateInfo transferInfo{};
-  transferInfo.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-  transferInfo.size = totalTransferSize;
+  SDL_GPUTransferBufferCreateInfo transferInfo{
+      .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = byteSize};
   SDL_GPUTransferBuffer *transferBuff =
       SDL_CreateGPUTransferBuffer(m_Device, &transferInfo);
-
   if (!transferBuff) {
-    ME_LOG_CORE_ERROR("Failed to create Transfer Buffer for mesh: {}",
-                      SDL_GetError());
-    SDL_ReleaseGPUBuffer(m_Device, vertBuff);
-    SDL_ReleaseGPUBuffer(m_Device, indBuff);
-    return MEGraphicsHandleNull;
+    SDL_ReleaseGPUBuffer(m_Device, gpuBuff);
+    return nullptr;
   }
 
-  std::byte *mappedData = reinterpret_cast<std::byte *>(
-      SDL_MapGPUTransferBuffer(m_Device, transferBuff, false));
-  std::memcpy(mappedData, verticies.data(), vertexByteSize);
-  std::memcpy(mappedData + alignedVertexByteSize, indicies.data(),
-              indexByteSize);
+  void *mappedData = SDL_MapGPUTransferBuffer(m_Device, transferBuff, false);
+  std::memcpy(mappedData, data, byteSize);
   SDL_UnmapGPUTransferBuffer(m_Device, transferBuff);
 
-  SDL_GPUCommandBuffer *uploadCmdBuff = SDL_AcquireGPUCommandBuffer(m_Device);
-  if (!uploadCmdBuff) {
-    ME_LOG_CORE_ERROR("Failed to acquire Command Buffer for mesh: {}",
-                      SDL_GetError());
+  SDL_GPUCommandBuffer *cmdBuff = SDL_AcquireGPUCommandBuffer(m_Device);
+  if (!cmdBuff) {
     SDL_ReleaseGPUTransferBuffer(m_Device, transferBuff);
-    SDL_ReleaseGPUBuffer(m_Device, vertBuff);
-    SDL_ReleaseGPUBuffer(m_Device, indBuff);
+    SDL_ReleaseGPUBuffer(m_Device, gpuBuff);
+    return nullptr;
+  }
+
+  SDL_GPUCopyPass *copyPass = SDL_BeginGPUCopyPass(cmdBuff);
+  SDL_GPUTransferBufferLocation srcLoc{.transfer_buffer = transferBuff,
+                                       .offset = 0};
+  SDL_GPUBufferRegion dstRegion{
+      .buffer = gpuBuff, .offset = 0, .size = byteSize};
+  SDL_UploadToGPUBuffer(copyPass, &srcLoc, &dstRegion, false);
+  SDL_EndGPUCopyPass(copyPass);
+
+  SDL_SubmitGPUCommandBuffer(cmdBuff);
+  SDL_ReleaseGPUTransferBuffer(m_Device, transferBuff);
+
+  return gpuBuff;
+}
+
+VertexBufferHandle Renderer::CreateVertexBuffer(void *vertices,
+                                                uint32_t verticesCount,
+                                                uint32_t vertexStride) {
+  const uint32_t byteSize = verticesCount * vertexStride;
+  SDL_GPUBuffer *gpuBuff =
+      UploadDataToGPU(vertices, byteSize, SDL_GPU_BUFFERUSAGE_VERTEX);
+
+  if (!gpuBuff) {
+    ME_LOG_CORE_ERROR("Failed to create Vertex GPU Buffer for mesh");
     return MEGraphicsHandleNull;
   }
 
-  SDL_GPUCopyPass *copyPass = SDL_BeginGPUCopyPass(uploadCmdBuff);
+  VertexBufferInternal buff{
+      .GPUBuffer = gpuBuff, .Count = verticesCount, .Version = 1};
 
-  SDL_GPUTransferBufferLocation srcLoc{};
-  srcLoc.transfer_buffer = transferBuff;
+  const uint32_t index = static_cast<uint32_t>(m_VBs.size());
+  m_VBs.push_back(buff);
+  return CREATE_ME_GRAPHICS_HANDLE(1, index);
+}
 
-  SDL_GPUBufferRegion dstVertRegion{
-      .buffer = vertBuff, .offset = 0, .size = vertexByteSize};
-  srcLoc.offset = 0;
-  SDL_UploadToGPUBuffer(copyPass, &srcLoc, &dstVertRegion, false);
+IndexBufferHandle Renderer::CreateIndexBuffer(void *indicies,
+                                              uint32_t indicesCount,
+                                              uint32_t indexStride) {
+  const uint32_t byteSize = indicesCount * indexStride;
+  SDL_GPUBuffer *gpuBuff =
+      UploadDataToGPU(indicies, byteSize, SDL_GPU_BUFFERUSAGE_INDEX);
 
-  SDL_GPUBufferRegion dstIndRegion{
-      .buffer = indBuff, .offset = 0, .size = indexByteSize};
-  srcLoc.offset = alignedVertexByteSize;
-  SDL_UploadToGPUBuffer(copyPass, &srcLoc, &dstIndRegion, false);
+  if (!gpuBuff) {
+    ME_LOG_CORE_ERROR("Failed to create Index GPU Buffer!");
+    return MEGraphicsHandleNull;
+  }
 
-  SDL_EndGPUCopyPass(copyPass);
+  IndexBufferInternal buff{.GPUBuffer = gpuBuff,
+                           .Count = indicesCount,
+                           .IndexFormat = (indexStride == 2)
+                                              ? SDL_GPU_INDEXELEMENTSIZE_16BIT
+                                              : SDL_GPU_INDEXELEMENTSIZE_32BIT,
+                           .Version = 1};
 
-  SDL_SubmitGPUCommandBuffer(uploadCmdBuff);
-  SDL_ReleaseGPUTransferBuffer(m_Device, transferBuff);
+  const uint32_t index = static_cast<uint32_t>(m_IBs.size());
+  m_IBs.push_back(buff);
+  return CREATE_ME_GRAPHICS_HANDLE(1, index);
+}
 
-  MeshInternal mesh;
-  mesh.VertexBuffer = vertBuff;
-  mesh.IndexBuffer = indBuff;
-  mesh.VertexCount = vertexByteSize / vertexStride;
-  mesh.IndexCount = indexByteSize / indexStride;
-  mesh.IndexFormat = (indexStride == 2) ? SDL_GPU_INDEXELEMENTSIZE_16BIT
-                                        : SDL_GPU_INDEXELEMENTSIZE_32BIT;
-  mesh.Version = 1;
+MeshHandle Renderer::CreateMesh(VertexBufferHandle vertexBuffer,
+                                IndexBufferHandle indexBuffer) {
+  const uint32_t vbIdx = vertexBuffer.GetIndex();
+  const uint32_t indIdx = indexBuffer.GetIndex();
+
+  if (vbIdx >= m_VBs.size() || indIdx >= m_IBs.size()) {
+    ME_LOG_CORE_ERROR("Failed to create mesh. Handle index out of range");
+    return MEGraphicsHandleNull;
+  }
+
+  if (m_VBs[vbIdx].Version != vertexBuffer.GetVersion() ||
+      m_IBs[indIdx].Version != indexBuffer.GetVersion()) {
+    ME_LOG_CORE_ERROR("Failed to create mesh. Buffer version mismatch");
+    return MEGraphicsHandleNull;
+  }
+
+  if (!m_VBs[vbIdx].GPUBuffer || !m_IBs[indIdx].GPUBuffer) {
+    ME_LOG_CORE_ERROR("Failed to create mesh. GPU buffers not found");
+    return MEGraphicsHandleNull;
+  }
+
+  MeshInternal mesh{
+      .VertexBuffer = vertexBuffer, .IndexBuffer = indexBuffer, .Version = 1};
 
   const uint32_t index = static_cast<uint32_t>(m_Meshes.size());
   m_Meshes.push_back(mesh);
-
   return CREATE_ME_GRAPHICS_HANDLE(mesh.Version, index);
 }
 
@@ -236,7 +258,7 @@ ShaderHandle Renderer::CreateShader(std::span<const std::byte> vert,
   return CREATE_ME_GRAPHICS_HANDLE(program.Version, index);
 }
 
-PipelineHandle Renderer::CreateGraphicsPipeline(const ShaderHandle &shader,
+PipelineHandle Renderer::CreateGraphicsPipeline(ShaderHandle shader,
                                                 const BufferLayout &layout) {
   ShaderInternal &targetShader = m_Shaders[shader.GetIndex()];
 
@@ -290,7 +312,7 @@ PipelineHandle Renderer::CreateGraphicsPipeline(const ShaderHandle &shader,
   return static_cast<uint32_t>(m_Pipelines.size() - 1);
 }
 
-void Renderer::DrawMesh(const MeshHandle &meshHnd, const MaterialHandle &matHnd,
+void Renderer::DrawMesh(MeshHandle meshHnd, MaterialHandle matHnd,
                         PipelineHandle pipelineHnd) {
   if (!m_IsDrawing || !m_CurrentRenderPass ||
       meshHnd.GetIndex() >= m_Meshes.size() ||
@@ -298,20 +320,24 @@ void Renderer::DrawMesh(const MeshHandle &meshHnd, const MaterialHandle &matHnd,
     return;
 
   if (matHnd) {
-    if (matHnd.GetIndex() >= m_Materials.size())
+    if (matHnd.GetIndex() >= m_Materials.size() ||
+        matHnd.GetVersion() != m_Materials[matHnd.GetIndex()].Version)
       return;
   }
 
   const MeshInternal &mesh = m_Meshes[meshHnd.GetIndex()];
+  const VertexBufferInternal &vb = m_VBs[mesh.VertexBuffer.GetIndex()];
+  const IndexBufferInternal &ib = m_IBs[mesh.IndexBuffer.GetIndex()];
+
   SDL_GPUGraphicsPipeline *pipeline = m_Pipelines[pipelineHnd];
 
   SDL_BindGPUGraphicsPipeline(m_CurrentRenderPass, pipeline);
 
-  SDL_GPUBufferBinding vertBind{.buffer = mesh.VertexBuffer, .offset = 0};
+  SDL_GPUBufferBinding vertBind{.buffer = vb.GPUBuffer, .offset = 0};
   SDL_BindGPUVertexBuffers(m_CurrentRenderPass, 0, &vertBind, 1);
 
-  SDL_GPUBufferBinding indBind{.buffer = mesh.IndexBuffer, .offset = 0};
-  SDL_BindGPUIndexBuffer(m_CurrentRenderPass, &indBind, mesh.IndexFormat);
+  SDL_GPUBufferBinding indBind{.buffer = ib.GPUBuffer, .offset = 0};
+  SDL_BindGPUIndexBuffer(m_CurrentRenderPass, &indBind, ib.IndexFormat);
 
   if (matHnd) {
     const MaterialInternal &mat = m_Materials[matHnd.GetIndex()];
@@ -322,8 +348,7 @@ void Renderer::DrawMesh(const MeshHandle &meshHnd, const MaterialHandle &matHnd,
     }
   }
 
-  SDL_DrawGPUIndexedPrimitives(m_CurrentRenderPass, mesh.IndexCount, 1, 0, 0,
-                               0);
+  SDL_DrawGPUIndexedPrimitives(m_CurrentRenderPass, ib.Count, 1, 0, 0, 0);
 }
 
 void Renderer::StartFrame() {

@@ -1,6 +1,7 @@
 #include "Renderer.hpp"
 
 #include <cstring>
+
 namespace Mockingbird::SDL::Graphics {
 
 MaterialHandle Renderer::CreateMaterial(PipelineHandle pipelineHnd,
@@ -26,8 +27,8 @@ MaterialHandle Renderer::CreateMaterial(PipelineHandle pipelineHnd,
   return CREATE_ME_GRAPHICS_HANDLE(mat.Version, index);
 }
 
-void Renderer::MaterialSetFloat(const MaterialHandle &hnd,
-                                const std::string &property, float val) {
+void Renderer::MaterialSetFloat(MaterialHandle hnd, const std::string &property,
+                                float val) {
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
   auto it = mat.PropertyOffsets.find(property);
   if (it != mat.PropertyOffsets.end()) {
@@ -35,7 +36,7 @@ void Renderer::MaterialSetFloat(const MaterialHandle &hnd,
   }
 }
 
-void Renderer::MaterialSetFloat3(const MaterialHandle &hnd,
+void Renderer::MaterialSetFloat3(MaterialHandle hnd,
                                  const std::string &property,
                                  const Core::MEVec3 &val) {
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];

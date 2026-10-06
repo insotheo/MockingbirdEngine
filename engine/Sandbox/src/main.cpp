@@ -32,7 +32,7 @@ SDL::Graphics::MeshHandle mesh;
 SDL::Graphics::PipelineHandle pipeline;
 
 float bgR = 0.2f, bgG = 1.f, bgB = 0.4f;
-Core::MEVec3 trColor{1.0f, 1.0f, 1.0f};
+Core::MEVec3 rectColor{1.0f, 1.0f, 1.0f};
 
 class SandboxSubsystem : public Core::MESubsystem {
 public:
@@ -51,18 +51,23 @@ public:
     pipeline = graphics->GetRenderer().CreateGraphicsPipeline(shader, layout);
     mat = graphics->GetRenderer().CreateMaterial(pipeline, matLayout);
 
-    std::vector<float> verticies = {
+    float verticies[] = {
         // clang-format off
-        0.0f, 0.5f,
+        -0.5f, 0.5f,
         -0.5f, -0.5f,
-        0.5f, -0.5f
+        0.5f, -0.5f,
+        0.5f, 0.5f
         // clang-format on
     };
-    std::vector<uint16_t> indicies = {0, 1, 2};
+    uint16_t indicies[] = {0, 1, 2, 2, 3, 0};
 
-    mesh = graphics->GetRenderer().CreateMesh(
-        std::as_bytes(std::span(verticies)), layout.GetStride(),
-        std::as_bytes(std::span(indicies)), sizeof(uint16_t));
+    auto vb = graphics->GetRenderer().CreateVertexBuffer(
+        &verticies, sizeof(verticies) / sizeof(float), layout.GetStride());
+
+    auto ib = graphics->GetRenderer().CreateIndexBuffer(
+        &indicies, sizeof(indicies) / sizeof(uint16_t), sizeof(uint16_t));
+
+    mesh = graphics->GetRenderer().CreateMesh(vb, ib);
   }
 
   void OnUpdate(const Core::Time &time) override {
@@ -73,8 +78,8 @@ public:
     ImGui::ColorPicker3("Bg", &bgR);
     graphics->GetRenderer().SetClearColor(bgR, bgG, bgB);
 
-    ImGui::ColorPicker3("Triangle", &trColor.x);
-    graphics->GetRenderer().MaterialSetFloat3(mat, "uColor", trColor);
+    ImGui::ColorPicker3("Rectangle", &rectColor.x);
+    graphics->GetRenderer().MaterialSetFloat3(mat, "uColor", rectColor);
     graphics->GetRenderer().MaterialSetFloat(
         mat, "uTime", static_cast<float>(time.TotalTime));
 
