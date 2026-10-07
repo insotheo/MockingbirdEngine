@@ -2,17 +2,15 @@
 
 layout(location = 0) out vec4 fragColor;
 
-layout(set = 3, binding = 0, std140) uniform MatBuffer{
-    vec3 uColor;
-    vec3 uBgColor;
-    mat4 uEffect;
-};
+layout(location = 0) in vec3 aColor;
+layout(location = 1) in vec3 aBgColor;
+layout(location = 2) in mat4 aEffect;
 
 void main(){
     vec2 uv = (gl_FragCoord.xy / vec2(800.0, 600.0)) * 2.0 - 1.0;
     uv.x *= (800.0 / 600.0);
 
-    vec4 transformedUV = uEffect * vec4(uv, 0.0, 1.0);
+    vec4 transformedUV = aEffect * vec4(uv, 0.0, 1.0);
     vec2 p = transformedUV.xy;
 
     float d = length(p);
@@ -26,11 +24,11 @@ void main(){
     float shift = transformedUV.w * 0.1;
 
     vec3 patternColor;
-    patternColor.r = intensity * (uColor.r + shift);
-    patternColor.g = intensity * (uColor.g - shift);
-    patternColor.b = intensity * (uColor.b + sin(shift));
+    patternColor.r = intensity * (aColor.r + shift);
+    patternColor.g = intensity * (aColor.g - shift);
+    patternColor.b = intensity * (aColor.b + sin(shift));
 
-    vec3 finColor = mix(uBgColor, patternColor, clamp(intensity + 0.1 / (d + 0.1), 0.0, 1.0));
+    vec3 finColor = mix(aBgColor, patternColor, clamp(intensity + 0.1 / (d + 0.1), 0.0, 1.0));
 
     fragColor = vec4(finColor, 1.0);
 }

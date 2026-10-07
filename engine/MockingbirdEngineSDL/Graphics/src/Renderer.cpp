@@ -234,23 +234,40 @@ ShaderHandle Renderer::CreateShader(void *vert, size_t vertSize, void *frag,
   if (!m_Device)
     return MEGraphicsHandleNull;
 
-  SDL_GPUShader *vertShader = CreateShaderStage(vert, vertSize, desc.Vertex,
+  ShaderProgramDesc autoDesc = desc;
+
+  if (vert && vertSize > 0)
+    ReflectShaderStage(vert, vertSize, autoDesc.Vertex);
+
+  if (frag && fragSize > 0)
+    ReflectShaderStage(frag, fragSize, autoDesc.Fragment);
+
+  SDL_GPUShader *vertShader = CreateShaderStage(vert, vertSize, autoDesc.Vertex,
                                                 SDL_GPU_SHADERSTAGE_VERTEX);
   if (!vertShader) {
     ME_LOG_CORE_ERROR("Failed to create Vertex Shader: {}", SDL_GetError());
     return MEGraphicsHandleNull;
   }
 
-  SDL_GPUShader *fragShader = CreateShaderStage(frag, fragSize, desc.Fragment,
-                                                SDL_GPU_SHADERSTAGE_FRAGMENT);
+  SDL_GPUShader *fragShader = CreateShaderStage(
+      frag, fragSize, autoDesc.Fragment, SDL_GPU_SHADERSTAGE_FRAGMENT);
   if (!fragShader) {
     ME_LOG_CORE_ERROR("Failed to create Fragment Shader: {}", SDL_GetError());
     SDL_ReleaseGPUShader(m_Device, vertShader);
     return MEGraphicsHandleNull;
   }
 
-  ShaderInternal program{
-      .VertexShader = vertShader, .FragmentShader = fragShader, .Version = 1};
+  std::unordered_map<std::string, UniformBufferInternal> vertexUniforms =
+      ReflectUniformBufferLayout(vert, vertSize);
+  std::unordered_map<std::string, UniformBufferInternal> fragmentUniforms =
+      ReflectUniformBufferLayout(frag, fragSize);
+
+  ShaderInternal program{.VertexShader = vertShader,
+                         .FragmentShader = fragShader,
+                         .VertexLayout = ReflectVertexLayout(vert, vertSize),
+                         .VertexUniforms = std::move(vertexUniforms),
+                         .FragmentUniforms = std::move(fragmentUniforms),
+                         .Version = 1};
 
   const uint32_t index = static_cast<uint32_t>(m_Shaders.size());
   m_Shaders.push_back(program);
@@ -259,63 +276,55 @@ ShaderHandle Renderer::CreateShader(void *vert, size_t vertSize, void *frag,
 }
 
 PipelineHandle Renderer::CreateGraphicsPipeline(ShaderHandle shader,
-                                                const BufferLayout &layout) {
+                                                const PipelineStates &states) {
   ShaderInternal &targetShader = m_Shaders[shader.GetIndex()];
 
-  SDL_GPUGraphicsPipelineCreateInfo pipelineInfo{};
+  std::vector<SDL_GPUVertexAttribute> sdlAttribs;
+  const auto &attributes = targetShader.VertexLayout.GetAttributes();
 
-  SDL_GPUColorTargetDescription colorTargetDesc{};
-  colorTargetDesc.format = SDL_GetGPUSwapchainTextureFormat(m_Device, m_Wnd);
+  for (size_t i = 0; i < attributes.size(); ++i) {
+    const auto &attr = attributes[i];
+    SDL_GPUVertexAttribute el{};
+    el.location = static_cast<uint32_t>(i);
+    el.buffer_slot = 0;
+    el.format = ShaderDataTypeToSDL(attr.Type);
+    el.offset = attr.Offset;
 
-  pipelineInfo.target_info.num_color_targets = 1;
-  pipelineInfo.target_info.color_target_descriptions = &colorTargetDesc;
+    sdlAttribs.push_back(el);
+  }
 
   SDL_GPUVertexBufferDescription bufferDesc{};
   bufferDesc.slot = 0;
-  bufferDesc.pitch = layout.GetStride();
   bufferDesc.input_rate = SDL_GPU_VERTEXINPUTRATE_VERTEX;
-
-  std::vector<SDL_GPUVertexAttribute> sdlAttribs;
-  uint32_t currLoc = 0;
-
-  for (const auto &attr : layout) {
-    if (attr.Type == ShaderDataType::Mat4) {
-      for (int i = 0; i < 4; ++i) {
-        SDL_GPUVertexAttribute element{};
-        element.location = currLoc++;
-        element.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4;
-        element.offset = attr.Offset + (i * 16);
-        sdlAttribs.push_back(element);
-      }
-    } else if (attr.Type == ShaderDataType::Mat3) {
-      for (int i = 0; i < 3; ++i) {
-        SDL_GPUVertexAttribute element{};
-        element.location = currLoc++;
-        element.format = SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3;
-        element.offset = attr.Offset + (i * 12);
-        sdlAttribs.push_back(element);
-      }
-    } else {
-      SDL_GPUVertexAttribute sdlAttr{};
-      sdlAttr.location = currLoc++;
-      sdlAttr.buffer_slot = 0;
-      sdlAttr.format = ShaderDataTypeToSDL(attr.Type);
-      sdlAttr.offset = attr.Offset;
-      sdlAttribs.push_back(sdlAttr);
-    }
-  }
+  bufferDesc.instance_step_rate = 0;
+  bufferDesc.pitch = targetShader.VertexLayout.GetStride();
 
   SDL_GPUVertexInputState vertexInputState{};
-  vertexInputState.num_vertex_buffers = 1;
   vertexInputState.vertex_buffer_descriptions = &bufferDesc;
+  vertexInputState.num_vertex_buffers = 1;
+  vertexInputState.vertex_attributes = sdlAttribs.data();
   vertexInputState.num_vertex_attributes =
       static_cast<uint32_t>(sdlAttribs.size());
-  vertexInputState.vertex_attributes = sdlAttribs.data();
 
-  pipelineInfo.vertex_input_state = vertexInputState;
+  SDL_GPUColorTargetDescription colorTargetDesc{};
+  colorTargetDesc.format = states.ColorTargetFormat;
+  // TODO blending
+
+  SDL_GPUGraphicsPipelineCreateInfo pipelineInfo{};
   pipelineInfo.vertex_shader = targetShader.VertexShader;
   pipelineInfo.fragment_shader = targetShader.FragmentShader;
-  pipelineInfo.primitive_type = SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
+
+  pipelineInfo.vertex_input_state = vertexInputState;
+
+  pipelineInfo.primitive_type = states.PrimitiveType;
+  pipelineInfo.rasterizer_state = states.RasterizerState;
+  // pipelineInfo.depth_stencil_state = states.DepthStencilState;
+
+  pipelineInfo.target_info.color_target_descriptions = &colorTargetDesc;
+  pipelineInfo.target_info.num_color_targets = 1;
+  // pipelineInfo.target_info.depth_stencil_format = states.DepthStencilFormat;
+  // pipelineInfo.target_info.has_depth_stencil_target =
+  //     (states.DepthStencilFormat != SDL_GPU_TEXTUREFORMAT_INVALID);
 
   SDL_GPUGraphicsPipeline *pipeline =
       SDL_CreateGPUGraphicsPipeline(m_Device, &pipelineInfo);
@@ -359,9 +368,15 @@ void Renderer::DrawMesh(MeshHandle meshHnd, MaterialHandle matHnd,
   if (matHnd) {
     const MaterialInternal &mat = m_Materials[matHnd.GetIndex()];
     if (!mat.UniformCPUBuffer.empty()) {
-      SDL_PushGPUFragmentUniformData(
-          m_CurrentCmdBuff, mat.Binding, mat.UniformCPUBuffer.data(),
-          static_cast<uint32_t>(mat.UniformCPUBuffer.size()));
+      if (mat.IsFragment) {
+        SDL_PushGPUFragmentUniformData(
+            m_CurrentCmdBuff, mat.Binding, mat.UniformCPUBuffer.data(),
+            static_cast<uint32_t>(mat.UniformCPUBuffer.size()));
+      } else {
+        SDL_PushGPUVertexUniformData(
+            m_CurrentCmdBuff, mat.Binding, mat.UniformCPUBuffer.data(),
+            static_cast<uint32_t>(mat.UniformCPUBuffer.size()));
+      }
     }
   }
 

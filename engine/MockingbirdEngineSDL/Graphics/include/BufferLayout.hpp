@@ -142,7 +142,17 @@ public:
     CalculateOffsetsAndStride(layoutType);
   }
 
+  BufferLayout(std::vector<MEBufferAttribute> &attribs,
+               LayoutType layoutType = LayoutType::Vertex)
+      : m_Attributes(std::move(attribs)) {
+    CalculateOffsetsAndStride(layoutType);
+  }
+
+  BufferLayout(std::vector<MEBufferAttribute> &attribs, uint32_t stride)
+      : m_Attributes(std::move(attribs)), m_Stride(stride) {}
+
   inline uint32_t GetStride() const { return m_Stride; }
+
   inline const std::vector<MEBufferAttribute> &GetAttributes() const {
     return m_Attributes;
   }

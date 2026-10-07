@@ -1,24 +1,36 @@
 #include "Core/Math.hpp"
 #include "Renderer.hpp"
 
+#include <Core/Log.hpp>
 #include <cstring>
 
 namespace Mockingbird::SDL::Graphics {
 
-MaterialHandle Renderer::CreateMaterial(PipelineHandle pipelineHnd,
-                                        const BufferLayout &layout,
-                                        uint32_t binding) {
-  if (pipelineHnd < 0 || pipelineHnd >= m_Pipelines.size() ||
-      !m_Pipelines[pipelineHnd])
+MaterialHandle Renderer::CreateMaterial(ShaderHandle shaderHnd,
+                                        const std::string &bufferName,
+                                        bool isFragment) {
+  if (shaderHnd.GetIndex() >= m_Shaders.size() ||
+      shaderHnd.GetVersion() != m_Shaders[shaderHnd.GetIndex()].Version)
     return MEGraphicsHandleNull;
 
+  ShaderInternal &shader = m_Shaders[shaderHnd.GetIndex()];
+  auto &uniformsMap =
+      (isFragment ? shader.FragmentUniforms : shader.VertexUniforms);
+  if (!uniformsMap.contains(bufferName)) {
+    ME_LOG_CORE_ERROR("No buffer {} found at {} shader!", bufferName,
+                      (isFragment ? "fragment" : "vertex"));
+    return MEGraphicsHandleNull;
+  }
+  UniformBufferInternal &ub = uniformsMap[bufferName];
+
   MaterialInternal mat;
-  mat.PipelineHnd = pipelineHnd;
-  mat.UniformCPUBuffer.resize(layout.GetStride(), 0);
-  mat.Binding = binding;
+  mat.IsFragment = isFragment;
+  mat.ShaderHnd = shaderHnd;
+  mat.UniformCPUBuffer.resize(ub.Layout.GetStride(), 0);
+  mat.Binding = ub.Binding;
   mat.Version = 1;
 
-  for (const auto &attr : layout) {
+  for (const auto &attr : ub.Layout) {
     mat.PropertyOffsets[attr.Name] = attr.Offset;
   }
 
@@ -30,6 +42,8 @@ MaterialHandle Renderer::CreateMaterial(PipelineHandle pipelineHnd,
 
 void Renderer::MaterialSetFloat(MaterialHandle hnd, const std::string &property,
                                 float val) {
+  if (!hnd)
+    return;
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
   auto it = mat.PropertyOffsets.find(property);
   if (it != mat.PropertyOffsets.end()) {
@@ -40,6 +54,8 @@ void Renderer::MaterialSetFloat(MaterialHandle hnd, const std::string &property,
 void Renderer::MaterialSetFloat2(MaterialHandle hnd,
                                  const std::string &property,
                                  const Core::MEVec2 &val) {
+  if (!hnd)
+    return;
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
   auto it = mat.PropertyOffsets.find(property);
   if (it != mat.PropertyOffsets.end()) {
@@ -51,6 +67,8 @@ void Renderer::MaterialSetFloat2(MaterialHandle hnd,
 void Renderer::MaterialSetFloat3(MaterialHandle hnd,
                                  const std::string &property,
                                  const Core::MEVec3 &val) {
+  if (!hnd)
+    return;
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
   auto it = mat.PropertyOffsets.find(property);
   if (it != mat.PropertyOffsets.end()) {
@@ -62,6 +80,8 @@ void Renderer::MaterialSetFloat3(MaterialHandle hnd,
 void Renderer::MaterialSetFloat4(MaterialHandle hnd,
                                  const std::string &property,
                                  const Core::MEVec4 &val) {
+  if (!hnd)
+    return;
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
   auto it = mat.PropertyOffsets.find(property);
   if (it != mat.PropertyOffsets.end()) {
@@ -72,6 +92,8 @@ void Renderer::MaterialSetFloat4(MaterialHandle hnd,
 
 void Renderer::MaterialSetInt(MaterialHandle hnd, const std::string &property,
                               int val) {
+  if (!hnd)
+    return;
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
   auto it = mat.PropertyOffsets.find(property);
   if (it != mat.PropertyOffsets.end()) {
@@ -81,6 +103,8 @@ void Renderer::MaterialSetInt(MaterialHandle hnd, const std::string &property,
 
 void Renderer::MaterialSetInt2(MaterialHandle hnd, const std::string &property,
                                const Core::MEVec2i &val) {
+  if (!hnd)
+    return;
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
   auto it = mat.PropertyOffsets.find(property);
   if (it != mat.PropertyOffsets.end()) {
@@ -91,6 +115,8 @@ void Renderer::MaterialSetInt2(MaterialHandle hnd, const std::string &property,
 
 void Renderer::MaterialSetInt3(MaterialHandle hnd, const std::string &property,
                                const Core::MEVec3i &val) {
+  if (!hnd)
+    return;
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
   auto it = mat.PropertyOffsets.find(property);
   if (it != mat.PropertyOffsets.end()) {
@@ -101,6 +127,8 @@ void Renderer::MaterialSetInt3(MaterialHandle hnd, const std::string &property,
 
 void Renderer::MaterialSetInt4(MaterialHandle hnd, const std::string &property,
                                const Core::MEVec4i &val) {
+  if (!hnd)
+    return;
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
   auto it = mat.PropertyOffsets.find(property);
   if (it != mat.PropertyOffsets.end()) {
@@ -111,6 +139,8 @@ void Renderer::MaterialSetInt4(MaterialHandle hnd, const std::string &property,
 
 void Renderer::MaterialSetMat3(MaterialHandle hnd, const std::string &property,
                                const Core::MEMat3 &val) {
+  if (!hnd)
+    return;
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
   auto it = mat.PropertyOffsets.find(property);
   if (it != mat.PropertyOffsets.end()) {
@@ -122,6 +152,8 @@ void Renderer::MaterialSetMat3(MaterialHandle hnd, const std::string &property,
 
 void Renderer::MaterialSetMat4(MaterialHandle hnd, const std::string &property,
                                const Core::MEMat4 &val) {
+  if (!hnd)
+    return;
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
   auto it = mat.PropertyOffsets.find(property);
   if (it != mat.PropertyOffsets.end()) {

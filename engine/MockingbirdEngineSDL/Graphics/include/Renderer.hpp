@@ -7,6 +7,7 @@
 #include <SDL3/SDL.h>
 #include <cstddef>
 #include <cstdint>
+#include <spirv_cross.hpp>
 #include <unordered_map>
 #include <vector>
 
@@ -43,14 +44,15 @@ public:
                         IndexBufferHandle indexBuffer);
 
   ShaderHandle CreateShader(void *vert, size_t vertSize, void *frag,
-                            size_t fragSize, const ShaderProgramDesc &desc);
+                            size_t fragSize,
+                            const ShaderProgramDesc &desc = {});
 
   PipelineHandle CreateGraphicsPipeline(ShaderHandle shader,
-                                        const BufferLayout &layout);
+                                        const PipelineStates &states = {});
 
-  MaterialHandle CreateMaterial(PipelineHandle pipelineHnd,
-                                const BufferLayout &layout,
-                                uint32_t binding = 0);
+  MaterialHandle CreateMaterial(ShaderHandle shaderHnd,
+                                const std::string &bufferName,
+                                bool isFragment = true);
 
   void DrawMesh(MeshHandle meshHnd, MaterialHandle matHnd,
                 PipelineHandle pipelineHnd);
@@ -79,6 +81,15 @@ public:
                        const Core::MEMat3 &val);
   void MaterialSetMat4(MaterialHandle hnd, const std::string &property,
                        const Core::MEMat4 &val);
+
+  // shader getters
+  inline const BufferLayout *GetVertexLayout(ShaderHandle shader) const {
+    if (shader.GetIndex() >= m_Shaders.size() ||
+        shader.GetVersion() != m_Shaders[shader.GetIndex()].Version) {
+      return nullptr;
+    }
+    return &m_Shaders[shader.GetIndex()].VertexLayout;
+  }
 
   void StartFrame();
   void EndFrame();
@@ -112,14 +123,26 @@ private:
     uint32_t Version;
   };
 
+  struct UniformBufferInternal {
+    BufferLayout Layout;
+    uint32_t Binding;
+  };
+
   struct ShaderInternal {
     SDL_GPUShader *VertexShader;
     SDL_GPUShader *FragmentShader;
-    uint32_t Version;
+
+    BufferLayout VertexLayout;
+
+    std::unordered_map<std::string, UniformBufferInternal> VertexUniforms;
+    std::unordered_map<std::string, UniformBufferInternal> FragmentUniforms;
+
+    uint32_t Version = 1;
   };
 
   struct MaterialInternal {
-    PipelineHandle PipelineHnd;
+    ShaderHandle ShaderHnd;
+    bool IsFragment;
     std::vector<uint8_t> UniformCPUBuffer;
     std::unordered_map<std::string, uint32_t> PropertyOffsets;
     uint32_t Version;
@@ -127,6 +150,18 @@ private:
   };
 
 private:
+  // Shader reflection
+  void ReflectShaderStage(const void *code, size_t codeSize,
+                          ShaderStageDesc &outDesc);
+
+  ShaderDataType ConvertSPIRVType(const spirv_cross::SPIRType &type);
+
+  std::unordered_map<std::string, UniformBufferInternal>
+  ReflectUniformBufferLayout(const void *spirvBytecode, size_t bytecodeSize);
+
+  BufferLayout ReflectVertexLayout(const void *spirvBytecode,
+                                   size_t bytecodeSize);
+
   SDL_GPUShader *CreateShaderStage(void *code, size_t codeSize,
                                    const ShaderStageDesc &desc,
                                    SDL_GPUShaderStage stage);

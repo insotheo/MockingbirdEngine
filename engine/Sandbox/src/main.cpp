@@ -15,18 +15,6 @@ using namespace Mockingbird;
 SDL::Windowing::MESDLWindowingSubsystem *wnd;
 SDL::Graphics::MESDLGraphicsSubsystem *graphics;
 
-SDL::Graphics::BufferLayout layout({SDL::Graphics::MEBufferAttribute(
-    SDL::Graphics::ShaderDataType::Float2, "vPos")});
-
-SDL::Graphics::BufferLayout matLayout(
-    {SDL::Graphics::MEBufferAttribute(SDL::Graphics::ShaderDataType::Float3,
-                                      "uColor"),
-     SDL::Graphics::MEBufferAttribute(SDL::Graphics::ShaderDataType::Float3,
-                                      "uBgColor"),
-     SDL::Graphics::MEBufferAttribute(SDL::Graphics::ShaderDataType::Mat4,
-                                      "uEffect")},
-    SDL::Graphics::LayoutType::UniformStd140);
-
 SDL::Graphics::ShaderHandle shader;
 SDL::Graphics::MaterialHandle mat;
 SDL::Graphics::MeshHandle mesh;
@@ -49,10 +37,9 @@ public:
         Core::LoadFileBytes("./assets/hello.frag.spv");
 
     shader = graphics->GetRenderer().CreateShader(
-        vertCode.data(), vertCode.size(), fragCode.data(), fragCode.size(),
-        {.Fragment = {.UniformBufferCount = 1}});
-    pipeline = graphics->GetRenderer().CreateGraphicsPipeline(shader, layout);
-    mat = graphics->GetRenderer().CreateMaterial(pipeline, matLayout);
+        vertCode.data(), vertCode.size(), fragCode.data(), fragCode.size());
+    pipeline = graphics->GetRenderer().CreateGraphicsPipeline(shader);
+    mat = graphics->GetRenderer().CreateMaterial(shader, "MatBuffer", false);
 
     float verticies[] = {
         // clang-format off
@@ -65,7 +52,8 @@ public:
     uint16_t indicies[] = {0, 1, 2, 2, 3, 0};
 
     auto vb = graphics->GetRenderer().CreateVertexBuffer(
-        &verticies, sizeof(verticies) / sizeof(float), layout.GetStride());
+        &verticies, sizeof(verticies) / sizeof(float),
+        graphics->GetRenderer().GetVertexLayout(shader)->GetStride());
 
     auto ib = graphics->GetRenderer().CreateIndexBuffer(
         &indicies, sizeof(indicies) / sizeof(uint16_t), sizeof(uint16_t));
@@ -99,6 +87,8 @@ public:
     graphics->GetRenderer().MaterialSetFloat3(mat, "uColor", rectColor);
     graphics->GetRenderer().MaterialSetFloat3(mat, "uBgColor", rectBgColor);
     graphics->GetRenderer().MaterialSetMat4(mat, "uEffect", matrix);
+    graphics->GetRenderer().MaterialSetFloat(
+        mat, "uTime", static_cast<float>(time.TotalTime));
 
     ImGui::End();
   }
