@@ -151,16 +151,15 @@ private:
 
 private:
   // Shader reflection
-  void ReflectShaderStage(const void *code, size_t codeSize,
+  void ReflectShaderStage(spirv_cross::Compiler &compiler,
                           ShaderStageDesc &outDesc);
 
   ShaderDataType ConvertSPIRVType(const spirv_cross::SPIRType &type);
 
   std::unordered_map<std::string, UniformBufferInternal>
-  ReflectUniformBufferLayout(const void *spirvBytecode, size_t bytecodeSize);
+  ReflectUniformBufferLayout(spirv_cross::Compiler &compiler);
 
-  BufferLayout ReflectVertexLayout(const void *spirvBytecode,
-                                   size_t bytecodeSize);
+  BufferLayout ReflectVertexLayout(spirv_cross::Compiler &compiler);
 
   SDL_GPUShader *CreateShaderStage(void *code, size_t codeSize,
                                    const ShaderStageDesc &desc,

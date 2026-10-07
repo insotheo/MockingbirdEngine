@@ -2,9 +2,9 @@
 
 layout(location = 0) out vec4 fragColor;
 
-layout(location = 0) in vec3 aColor;
-layout(location = 1) in vec3 aBgColor;
-layout(location = 2) in mat4 aEffect;
+layout(location = 0) flat in vec3 aColor;
+layout(location = 1) flat in vec3 aBgColor;
+layout(location = 2) flat in mat4 aEffect;
 
 void main(){
     vec2 uv = (gl_FragCoord.xy / vec2(800.0, 600.0)) * 2.0 - 1.0;

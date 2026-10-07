@@ -6,17 +6,9 @@
 
 namespace Mockingbird::SDL::Graphics {
 
-void Renderer::ReflectShaderStage(const void *code, size_t codeSize,
+void Renderer::ReflectShaderStage(spirv_cross::Compiler &compiler,
                                   ShaderStageDesc &outDesc) {
-  if (!code || codeSize == 0)
-    return;
-
-  const size_t wordCount = codeSize / sizeof(uint32_t);
-  const uint32_t *spirvData = reinterpret_cast<const uint32_t *>(code);
-
   try {
-    spirv_cross::Compiler compiler(spirvData, wordCount);
-
     auto entryPoints = compiler.get_entry_points_and_stages();
     if (!entryPoints.empty()) {
       outDesc.EntryPoint = compiler.get_cleansed_entry_point_name(
@@ -72,12 +64,7 @@ ShaderDataType Renderer::ConvertSPIRVType(const spirv_cross::SPIRType &type) {
 }
 
 std::unordered_map<std::string, Renderer::UniformBufferInternal>
-Renderer::ReflectUniformBufferLayout(const void *spirvBytecode,
-                                     size_t bytecodeSize) {
-  const uint32_t wordCount = bytecodeSize / sizeof(uint32_t);
-  const uint32_t *bytecode = reinterpret_cast<const uint32_t *>(spirvBytecode);
-
-  spirv_cross::Compiler compiler(bytecode, wordCount);
+Renderer::ReflectUniformBufferLayout(spirv_cross::Compiler &compiler) {
   spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
   std::unordered_map<std::string, UniformBufferInternal> uniforms;
@@ -121,12 +108,7 @@ Renderer::ReflectUniformBufferLayout(const void *spirvBytecode,
   return uniforms;
 }
 
-BufferLayout Renderer::ReflectVertexLayout(const void *spirvBytecode,
-                                           size_t bytecodeSize) {
-  const uint32_t wordCount = bytecodeSize / sizeof(uint32_t);
-  const uint32_t *bytecode = reinterpret_cast<const uint32_t *>(spirvBytecode);
-
-  spirv_cross::Compiler compiler(bytecode, wordCount);
+BufferLayout Renderer::ReflectVertexLayout(spirv_cross::Compiler &compiler) {
   spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
   struct SortedAttribute {

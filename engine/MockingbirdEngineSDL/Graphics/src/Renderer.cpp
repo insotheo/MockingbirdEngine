@@ -236,11 +236,24 @@ ShaderHandle Renderer::CreateShader(void *vert, size_t vertSize, void *frag,
 
   ShaderProgramDesc autoDesc = desc;
 
-  if (vert && vertSize > 0)
-    ReflectShaderStage(vert, vertSize, autoDesc.Vertex);
+  if (!vert || vertSize == 0 || !frag || fragSize == 0) {
+    ME_LOG_CORE_ERROR("Vertex or fragment shader was empty");
+    return MEGraphicsHandleNull;
+  }
 
-  if (frag && fragSize > 0)
-    ReflectShaderStage(frag, fragSize, autoDesc.Fragment);
+  const uint32_t vertWordCount =
+      static_cast<uint32_t>(vertSize / sizeof(uint32_t));
+  const uint32_t fragWordCount =
+      static_cast<uint32_t>(fragSize / sizeof(uint32_t));
+
+  const uint32_t *vertSpirvBytecode = reinterpret_cast<const uint32_t *>(vert);
+  const uint32_t *fragSpirvBytecode = reinterpret_cast<const uint32_t *>(frag);
+
+  spirv_cross::Compiler vertCompiler(vertSpirvBytecode, vertWordCount);
+  spirv_cross::Compiler fragCompiler(fragSpirvBytecode, fragWordCount);
+
+  ReflectShaderStage(vertCompiler, autoDesc.Vertex);
+  ReflectShaderStage(fragCompiler, autoDesc.Fragment);
 
   SDL_GPUShader *vertShader = CreateShaderStage(vert, vertSize, autoDesc.Vertex,
                                                 SDL_GPU_SHADERSTAGE_VERTEX);
@@ -258,13 +271,13 @@ ShaderHandle Renderer::CreateShader(void *vert, size_t vertSize, void *frag,
   }
 
   std::unordered_map<std::string, UniformBufferInternal> vertexUniforms =
-      ReflectUniformBufferLayout(vert, vertSize);
+      ReflectUniformBufferLayout(vertCompiler);
   std::unordered_map<std::string, UniformBufferInternal> fragmentUniforms =
-      ReflectUniformBufferLayout(frag, fragSize);
+      ReflectUniformBufferLayout(fragCompiler);
 
   ShaderInternal program{.VertexShader = vertShader,
                          .FragmentShader = fragShader,
-                         .VertexLayout = ReflectVertexLayout(vert, vertSize),
+                         .VertexLayout = ReflectVertexLayout(vertCompiler),
                          .VertexUniforms = std::move(vertexUniforms),
                          .FragmentUniforms = std::move(fragmentUniforms),
                          .Version = 1};

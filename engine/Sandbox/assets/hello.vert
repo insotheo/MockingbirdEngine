@@ -9,9 +9,9 @@ layout(set = 1, binding = 0, std140) uniform MatBuffer {
     mat4 uEffect;
 };
 
-layout(location = 0) out vec3 aColor;
-layout(location = 1) out vec3 aBgColor;
-layout(location = 2) out mat4 aEffect;
+layout(location = 0) flat out vec3 aColor;
+layout(location = 1) flat out vec3 aBgColor;
+layout(location = 2) flat out mat4 aEffect;
 
 void main(){
     aColor = uColor;
