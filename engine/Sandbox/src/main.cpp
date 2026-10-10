@@ -61,8 +61,17 @@ public:
   }
 
   void OnUpdate(const Core::Time &time) override {
+    m_FpsTimer += time.DeltaTime;
+    m_FrameCount++;
+
+    if (m_FpsTimer >= 0.5f) {
+      m_LastDisplaydFps = static_cast<float>(m_FrameCount) / m_FpsTimer;
+      m_FpsTimer = 0.0f;
+      m_FrameCount = 0;
+    }
+
     ImGui::Begin("Menu");
-    ImGui::Text("FPS: %.2f", 1.f / time.DeltaTime);
+    ImGui::Text("FPS: %.1f", m_LastDisplaydFps);
     ImGui::End();
 
     graphics->GetRenderer().MaterialSetFloat(
@@ -76,6 +85,11 @@ public:
   }
 
   void OnShutdown() override {}
+
+private:
+  float m_FpsTimer = 0.0f;
+  int m_FrameCount = 0;
+  float m_LastDisplaydFps = 0.0f;
 };
 
 class SandboxApplication : public Core::Application {
