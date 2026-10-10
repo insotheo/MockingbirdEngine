@@ -1,22 +1,11 @@
 #version 450
 
 layout(location = 0) in vec2 vPos;
+layout(location = 1) in vec2 vTexCoord;
 
-layout(set = 1, binding = 0, std140) uniform MatBuffer {
-    float uTime;
-    vec3 uColor;
-    vec3 uBgColor;
-    mat4 uEffect;
-};
-
-layout(location = 0) flat out vec3 aColor;
-layout(location = 1) flat out vec3 aBgColor;
-layout(location = 2) flat out mat4 aEffect;
+layout(location = 0) out vec2 fragTexCoord;
 
 void main(){
-    aColor = uColor;
-    aBgColor = uBgColor;
-    aEffect = uEffect;
-
-    gl_Position = vec4(vPos.x + sin(uTime * 5.0), vPos.y, 0.0, 1.0);
+    fragTexCoord = vTexCoord;
+    gl_Position = vec4(vPos, 0.0, 1.0);
 }

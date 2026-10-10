@@ -6,6 +6,10 @@
 
 namespace Mockingbird::SDL::Graphics {
 
+// set = 1 - Vertex Material
+// set = 2 - Fragment Textures
+// set = 3 - Fragment Material(std140)
+
 MaterialHandle Renderer::CreateMaterial(ShaderHandle shaderHnd,
                                         const std::string &bufferName,
                                         bool isFragment) {

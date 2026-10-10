@@ -32,6 +32,15 @@ void Renderer::Init(SDL_Window *wnd) {
     return;
   }
 
+  SDL_GPUSamplerCreateInfo samplerInfo = {
+      .min_filter = SDL_GPU_FILTER_LINEAR,
+      .mag_filter = SDL_GPU_FILTER_LINEAR,
+      .mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_LINEAR,
+      .address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+      .address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE,
+  };
+  m_DefaultSampler = SDL_CreateGPUSampler(m_Device, &samplerInfo);
+
   SetVSync(m_VSync);
 }
 
@@ -67,6 +76,14 @@ void Renderer::Shutdown() {
   m_VBs.clear();
   m_IBs.clear();
   m_Meshes.clear();
+
+  for (auto &texture : m_Textures) {
+    if (texture.Texture)
+      SDL_ReleaseGPUTexture(m_Device, texture.Texture);
+  }
+  m_Textures.clear();
+  if (m_DefaultSampler)
+    SDL_ReleaseGPUSampler(m_Device, m_DefaultSampler);
 
   if (m_Wnd && m_Device)
     SDL_ReleaseWindowFromGPUDevice(m_Device, m_Wnd);
@@ -288,6 +305,72 @@ ShaderHandle Renderer::CreateShader(void *vert, size_t vertSize, void *frag,
   return CREATE_ME_GRAPHICS_HANDLE(program.Version, index);
 }
 
+TextureHandle Renderer::CreateTexture(const Core::FileSys::ImageFile &imgData) {
+  if (!imgData.Pixels) {
+    ME_LOG_CORE_ERROR("Cannot create texture. Image is null.");
+    return MEGraphicsHandleNull;
+  }
+
+  uint32_t bufferSize = imgData.Width * imgData.Height * 4;
+
+  SDL_GPUTextureCreateInfo textureInfo = {
+      .type = SDL_GPU_TEXTURETYPE_2D,
+      .format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+      .usage = SDL_GPU_TEXTUREUSAGE_SAMPLER,
+      .width = static_cast<uint32_t>(imgData.Width),
+      .height = static_cast<uint32_t>(imgData.Height),
+      .layer_count_or_depth = 1,
+      .num_levels = 1,
+  };
+
+  SDL_GPUTexture *gpuTexture = SDL_CreateGPUTexture(m_Device, &textureInfo);
+  if (!gpuTexture) {
+    ME_LOG_CORE_ERROR("Failed to create GPU Texutre: {}", SDL_GetError());
+    return MEGraphicsHandleNull;
+  }
+
+  SDL_GPUTransferBufferCreateInfo transferInfo = {
+      .usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+      .size = bufferSize,
+  };
+  SDL_GPUTransferBuffer *transferBuff =
+      SDL_CreateGPUTransferBuffer(m_Device, &transferInfo);
+
+  void *buffData = SDL_MapGPUTransferBuffer(m_Device, transferBuff, false);
+  std::memcpy(buffData, imgData.Pixels, bufferSize);
+  SDL_UnmapGPUTransferBuffer(m_Device, transferBuff);
+
+  SDL_GPUCommandBuffer *cmdBuff = SDL_AcquireGPUCommandBuffer(m_Device);
+  SDL_GPUCopyPass *copyPass = SDL_BeginGPUCopyPass(cmdBuff);
+
+  SDL_GPUTextureTransferInfo srcInfo = {
+      .transfer_buffer = transferBuff,
+      .offset = 0,
+  };
+  SDL_GPUTextureRegion dstRegion = {
+      .texture = gpuTexture,
+      .w = static_cast<uint32_t>(imgData.Width),
+      .h = static_cast<uint32_t>(imgData.Height),
+      .d = 1,
+  };
+
+  SDL_UploadToGPUTexture(copyPass, &srcInfo, &dstRegion, false);
+  SDL_EndGPUCopyPass(copyPass);
+
+  SDL_SubmitGPUCommandBuffer(cmdBuff);
+  SDL_ReleaseGPUTransferBuffer(m_Device, transferBuff);
+
+  TextureInternal texture = {
+      .Texture = gpuTexture,
+      .Version = 1,
+  };
+
+  const uint32_t index = static_cast<uint32_t>(m_Textures.size());
+  m_Textures.push_back(texture);
+
+  return CREATE_ME_GRAPHICS_HANDLE(texture.Version, index);
+}
+
 PipelineHandle Renderer::CreateGraphicsPipeline(ShaderHandle shader,
                                                 const PipelineStates &states) {
   ShaderInternal &targetShader = m_Shaders[shader.GetIndex()];
@@ -352,7 +435,7 @@ PipelineHandle Renderer::CreateGraphicsPipeline(ShaderHandle shader,
 }
 
 void Renderer::DrawMesh(MeshHandle meshHnd, MaterialHandle matHnd,
-                        PipelineHandle pipelineHnd) {
+                        TextureHandle textureHnd, PipelineHandle pipelineHnd) {
   if (!m_IsDrawing || !m_CurrentRenderPass ||
       meshHnd.GetIndex() >= m_Meshes.size() ||
       pipelineHnd >= m_Pipelines.size())
@@ -361,6 +444,11 @@ void Renderer::DrawMesh(MeshHandle meshHnd, MaterialHandle matHnd,
   if (matHnd) {
     if (matHnd.GetIndex() >= m_Materials.size() ||
         matHnd.GetVersion() != m_Materials[matHnd.GetIndex()].Version)
+      return;
+  }
+  if (textureHnd) {
+    if (textureHnd.GetIndex() >= m_Textures.size() ||
+        textureHnd.GetVersion() != m_Textures[textureHnd.GetIndex()].Version)
       return;
   }
 
@@ -391,6 +479,17 @@ void Renderer::DrawMesh(MeshHandle meshHnd, MaterialHandle matHnd,
             static_cast<uint32_t>(mat.UniformCPUBuffer.size()));
       }
     }
+  }
+
+  if (textureHnd) {
+    const TextureInternal &texture = m_Textures[textureHnd.GetIndex()];
+
+    SDL_GPUTextureSamplerBinding textSamplBind{
+        .texture = texture.Texture,
+        .sampler = m_DefaultSampler,
+    };
+
+    SDL_BindGPUFragmentSamplers(m_CurrentRenderPass, 0, &textSamplBind, 1);
   }
 
   SDL_DrawGPUIndexedPrimitives(m_CurrentRenderPass, ib.Count, 1, 0, 0, 0);

@@ -42,7 +42,7 @@ endforeach()
 target_sources(Sandbox PRIVATE ${SPV_OUTPUTS})
 
 file(GLOB SANDBOX_ASSETS
-    assets/*
+    assets/testTexture.png
 )
 
 if(SANDBOX_ASSETS)

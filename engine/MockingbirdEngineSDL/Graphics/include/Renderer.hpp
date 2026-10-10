@@ -3,6 +3,7 @@
 #include "BufferLayout.hpp"
 #include "Descriptors.hpp"
 #include "GraphicsHandle.hpp"
+#include <Core/FileSys.hpp>
 #include <Core/Math.hpp>
 #include <SDL3/SDL.h>
 #include <cstddef>
@@ -54,8 +55,10 @@ public:
                                 const std::string &bufferName,
                                 bool isFragment = true);
 
+  TextureHandle CreateTexture(const Core::FileSys::ImageFile &imgData);
+
   void DrawMesh(MeshHandle meshHnd, MaterialHandle matHnd,
-                PipelineHandle pipelineHnd);
+                TextureHandle textureHnd, PipelineHandle pipelineHnd);
 
   inline void SetClearColor(float r, float g, float b, float alpha = 1.0f) {
     m_ClearColor = SDL_FColor{r, g, b, alpha};
@@ -99,10 +102,10 @@ public:
   void EndDraw2D();
 
 private:
-  // struct TextureInternal {
-  //   SDL_GPUTexture *Texture;
-  //   uint32_t Version;
-  // };
+  struct TextureInternal {
+    SDL_GPUTexture *Texture;
+    uint32_t Version;
+  };
 
   struct VertexBufferInternal {
     SDL_GPUBuffer *GPUBuffer = nullptr;
@@ -176,6 +179,7 @@ private:
   SDL_GPUCommandBuffer *m_CurrentCmdBuff = nullptr;
   SDL_GPURenderPass *m_CurrentRenderPass = nullptr;
   SDL_GPUTexture *m_CurrentTargetTexture = nullptr;
+  SDL_GPUSampler *m_DefaultSampler = nullptr;
 
   bool m_VSync = true;
   bool m_IsDrawing = false;
@@ -185,6 +189,7 @@ private:
   std::vector<VertexBufferInternal> m_VBs;
   std::vector<IndexBufferInternal> m_IBs;
   std::vector<MeshInternal> m_Meshes;
+  std::vector<TextureInternal> m_Textures;
   std::vector<ShaderInternal> m_Shaders;
   std::vector<MaterialInternal> m_Materials;
   std::vector<SDL_GPUGraphicsPipeline *> m_Pipelines;

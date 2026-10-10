@@ -1,12 +1,9 @@
-#include <Event/KeyboardEvent.hpp>
-#include <Event/MouseEvent.hpp>
 #include <MockingbirdEngineCore.hpp>
 #include <MockingbirdEngineSDLDearImGui.hpp>
 #include <MockingbirdEngineSDLGraphics.hpp>
 #include <MockingbirdEngineSDLWindowing.hpp>
 #include <imgui.h>
 
-#include <cmath>
 #include <cstdint>
 #include <vector>
 
@@ -16,13 +13,10 @@ SDL::Windowing::MESDLWindowingSubsystem *wnd;
 SDL::Graphics::MESDLGraphicsSubsystem *graphics;
 
 SDL::Graphics::ShaderHandle shader;
+SDL::Graphics::TextureHandle texture;
 SDL::Graphics::MaterialHandle mat;
 SDL::Graphics::MeshHandle mesh;
 SDL::Graphics::PipelineHandle pipeline;
-
-float bgR = 0.2f, bgG = 1.f, bgB = 0.4f;
-Core::MEVec3 rectColor{1.0f, 1.0f, 1.0f};
-Core::MEVec3 rectBgColor{0.0f, 0.0f, 0.0f};
 
 class SandboxSubsystem : public Core::MESubsystem {
 public:
@@ -32,21 +26,26 @@ public:
     ME_LOG_INFO("Game started");
 
     std::vector<uint8_t> vertCode =
-        Core::LoadFileBytes("./assets/hello.vert.spv");
+        Core::FileSys::LoadFileBytes("./assets/hello.vert.spv");
     std::vector<uint8_t> fragCode =
-        Core::LoadFileBytes("./assets/hello.frag.spv");
+        Core::FileSys::LoadFileBytes("./assets/hello.frag.spv");
+    Core::FileSys::ImageFile img =
+        Core::FileSys::LoadImage("./assets/testTexture.png");
 
     shader = graphics->GetRenderer().CreateShader(
         vertCode.data(), vertCode.size(), fragCode.data(), fragCode.size());
     pipeline = graphics->GetRenderer().CreateGraphicsPipeline(shader);
-    mat = graphics->GetRenderer().CreateMaterial(shader, "MatBuffer", false);
+    mat = graphics->GetRenderer().CreateMaterial(shader, "MatBuffer");
+    texture = graphics->GetRenderer().CreateTexture(img);
+
+    Core::FileSys::FreeImage(img);
 
     float verticies[] = {
         // clang-format off
-        -0.8f, 0.8f,
-        -0.8f, -0.8f,
-        0.8f, -0.8f,
-        0.8f, 0.8f
+        -0.8f, 0.8f, 1.0f, 0.0f,
+        -0.8f, -0.8f, 0.0f, 0.0f,
+        0.8f, -0.8f, 0.0f, 1.0f,
+        0.8f, 0.8f, 1.0f, 1.0f,
         // clang-format on
     };
     uint16_t indicies[] = {0, 1, 2, 2, 3, 0};
@@ -62,52 +61,18 @@ public:
   }
 
   void OnUpdate(const Core::Time &time) override {
-    Core::MEMat4 matrix(1.0f);
-
-    float angle = time.TotalTime * 0.5f;
-    matrix = Core::Math::Rotate(matrix, angle, Core::MEVec3(0.0f, 0.0f, 1.0f));
-
-    float scaleFactor = 1.0f + std::sin(time.TotalTime * 1.2f) * 0.4f;
-    matrix =
-        Core::Math::Scale(matrix, Core::MEVec3(scaleFactor, scaleFactor, 1.0f));
-
-    matrix[0][3] = std::sin(time.TotalTime * 2.0f) * 0.5f;
-    matrix[1][3] = std::cos(time.TotalTime * 1.5f) * 0.5f;
-
     ImGui::Begin("Menu");
-
     ImGui::Text("FPS: %.2f", 1.f / time.DeltaTime);
+    ImGui::End();
 
-    ImGui::ColorPicker3("Bg", &bgR);
-    graphics->GetRenderer().SetClearColor(bgR, bgG, bgB);
-
-    ImGui::ColorPicker3("Rectangle", &rectColor.x);
-    ImGui::ColorPicker3("Rectangle bg", &rectBgColor.x);
-
-    graphics->GetRenderer().MaterialSetFloat3(mat, "uColor", rectColor);
-    graphics->GetRenderer().MaterialSetFloat3(mat, "uBgColor", rectBgColor);
-    graphics->GetRenderer().MaterialSetMat4(mat, "uEffect", matrix);
     graphics->GetRenderer().MaterialSetFloat(
         mat, "uTime", static_cast<float>(time.TotalTime));
-
-    ImGui::End();
   }
 
   void OnRender() override {
     graphics->GetRenderer().BeginDraw2D();
-    graphics->GetRenderer().DrawMesh(mesh, mat, pipeline);
+    graphics->GetRenderer().DrawMesh(mesh, mat, texture, pipeline);
     graphics->GetRenderer().EndDraw2D();
-  }
-
-  void OnEvent(Core::Event &event) override {
-    Core::EventDispatcher dispatcher(event);
-
-    dispatcher.Dispatch<Core::KeyPressedEvent>(
-        [&](Core::KeyPressedEvent &e) { ME_LOG_INFO("{}", e.ToString()); });
-    dispatcher.Dispatch<Core::MouseButtonPressedEvent>(
-        [&](Core::MouseButtonPressedEvent &e) {
-          ME_LOG_INFO("{}", e.ToString());
-        });
   }
 
   void OnShutdown() override {}

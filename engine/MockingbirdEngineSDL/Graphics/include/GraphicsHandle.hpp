@@ -17,6 +17,7 @@ using MaterialHandle = MEGraphicsHandle;
 using MeshHandle = MEGraphicsHandle;
 using VertexBufferHandle = MEGraphicsHandle;
 using IndexBufferHandle = MEGraphicsHandle;
+using TextureHandle = MEGraphicsHandle;
 using PipelineHandle = uint32_t;
 
 constexpr MEGraphicsHandle MEGraphicsHandleNull = MEGraphicsHandle{.Id = 0};
