@@ -11,6 +11,8 @@ namespace Mockingbird::SDL::Graphics {
 void Renderer::Init(SDL_Window *wnd) {
   m_Wnd = wnd;
 
+  SDL_SetHint(SDL_HINT_RENDER_DRIVER, "vulkan");
+
   m_Device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV,
 #if ME_DEBUG
                                  true,
