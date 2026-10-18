@@ -3,6 +3,7 @@
 #include "Core/SubsystemManager.hpp"
 #include "Core/Time.hpp"
 #include "Event/Event.hpp"
+#include "VFS/VFS.hpp"
 #include <functional>
 
 namespace Mockingbird::Core {
@@ -20,7 +21,8 @@ public:
   void PostEvent(Event &event);
 
   inline static Application *GetApp() { return s_App; }
-  inline SubsystemManager &GetSubsystemManager() { return m_SubsystemManager; }
+  inline SubsystemManager *GetSubsystemManager() { return &m_SubsystemManager; }
+  inline VFS *GetAppVFS() { return &m_VFS; }
 
   inline void SetRenderCallbacks(RenderCallback pre, RenderCallback post) {
     m_PreRenderCallback = std::move(pre);
@@ -34,6 +36,7 @@ private:
   bool m_IsRunning;
   Time m_Time;
   SubsystemManager m_SubsystemManager;
+  VFS m_VFS;
 
   RenderCallback m_PreRenderCallback = nullptr;
   RenderCallback m_PostRenderCallback = nullptr;

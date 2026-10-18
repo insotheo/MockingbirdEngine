@@ -2,7 +2,7 @@
 
 extern Mockingbird::Core::Application *CreateMockingbirdApplication();
 
-int main(int argc, char **agrv) {
+int main(int argc, char **argv) {
   auto app = CreateMockingbirdApplication();
   ME_LOG_CORE_TRACE("Application was created successfuly!");
   app->Run();

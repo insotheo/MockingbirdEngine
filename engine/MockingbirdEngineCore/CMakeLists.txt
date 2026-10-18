@@ -6,7 +6,8 @@ set(ENGINE_CORE
     src/Application.cpp
     src/EventTypeCounter.cpp
     src/SubsystemManager.cpp
-    src/FileSys.cpp
+    src/VFS.cpp
+    src/VFSPhysical.cpp
 )
 
 FetchContent_Declare(

@@ -307,9 +307,9 @@ ShaderHandle Renderer::CreateShader(void *vert, size_t vertSize, void *frag,
   return CREATE_ME_GRAPHICS_HANDLE(program.Version, index);
 }
 
-TextureHandle Renderer::CreateTexture(const Core::FileSys::ImageFile &imgData) {
-  if (!imgData.Pixels) {
-    ME_LOG_CORE_ERROR("Cannot create texture. Image is null.");
+TextureHandle Renderer::CreateTexture(const Core::ImageFile &imgData) {
+  if (imgData.Data.empty()) {
+    ME_LOG_CORE_ERROR("Cannot create texture. Image is empty.");
     return MEGraphicsHandleNull;
   }
 
@@ -339,7 +339,7 @@ TextureHandle Renderer::CreateTexture(const Core::FileSys::ImageFile &imgData) {
       SDL_CreateGPUTransferBuffer(m_Device, &transferInfo);
 
   void *buffData = SDL_MapGPUTransferBuffer(m_Device, transferBuff, false);
-  std::memcpy(buffData, imgData.Pixels, bufferSize);
+  std::memcpy(buffData, imgData.Data.data(), bufferSize);
   SDL_UnmapGPUTransferBuffer(m_Device, transferBuff);
 
   SDL_GPUCommandBuffer *cmdBuff = SDL_AcquireGPUCommandBuffer(m_Device);

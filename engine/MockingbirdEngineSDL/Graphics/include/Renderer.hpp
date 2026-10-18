@@ -3,9 +3,9 @@
 #include "BufferLayout.hpp"
 #include "Descriptors.hpp"
 #include "GraphicsHandle.hpp"
-#include <Core/FileSys.hpp>
 #include <Core/Math.hpp>
 #include <SDL3/SDL.h>
+#include <VFS/VFSInfos.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <spirv_cross.hpp>
@@ -55,7 +55,7 @@ public:
                                 const std::string &bufferName,
                                 bool isFragment = true);
 
-  TextureHandle CreateTexture(const Core::FileSys::ImageFile &imgData);
+  TextureHandle CreateTexture(const Core::ImageFile &imgData);
 
   void DrawMesh(MeshHandle meshHnd, MaterialHandle matHnd,
                 TextureHandle textureHnd, PipelineHandle pipelineHnd);

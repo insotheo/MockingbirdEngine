@@ -1,6 +1,8 @@
 #include "Core/Application.hpp"
 
 #include "Core/Log.hpp"
+#include "VFS/VFS.hpp"
+#include "VFS/VFSPhysical.hpp"
 #include <chrono>
 
 namespace Mockingbird::Core {
@@ -12,6 +14,10 @@ Application::Application() : m_IsRunning(false) {
     return;
   }
   s_App = this;
+
+  auto defaultDriver =
+      std::make_shared<VFSPhysicalDriver>(GetExecutableDirectory().string());
+  m_VFS.Mount("root/", defaultDriver);
 }
 
 Application::~Application() { Terminate(); }

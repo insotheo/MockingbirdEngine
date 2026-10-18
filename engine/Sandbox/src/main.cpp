@@ -9,6 +9,7 @@
 
 using namespace Mockingbird;
 
+Core::VFS *vfs;
 SDL::Windowing::MESDLWindowingSubsystem *wnd;
 SDL::Graphics::MESDLGraphicsSubsystem *graphics;
 
@@ -26,19 +27,16 @@ public:
     ME_LOG_INFO("Game started");
 
     std::vector<uint8_t> vertCode =
-        Core::FileSys::LoadFileBytes("./assets/hello.vert.spv");
+        vfs->Open("root/assets/hello.vert.spv")->GetBytes();
     std::vector<uint8_t> fragCode =
-        Core::FileSys::LoadFileBytes("./assets/hello.frag.spv");
-    Core::FileSys::ImageFile img =
-        Core::FileSys::LoadImage("./assets/testTexture.png");
+        vfs->Open("root/assets/hello.frag.spv")->GetBytes();
+    Core::ImageFile img = vfs->Open("root/assets/testTexture.png")->GetImage();
 
     shader = graphics->GetRenderer().CreateShader(
         vertCode.data(), vertCode.size(), fragCode.data(), fragCode.size());
     pipeline = graphics->GetRenderer().CreateGraphicsPipeline(shader);
     mat = graphics->GetRenderer().CreateMaterial(shader, "MatBuffer");
     texture = graphics->GetRenderer().CreateTexture(img);
-
-    Core::FileSys::FreeImage(img);
 
     float verticies[] = {
         // clang-format off
@@ -94,24 +92,25 @@ private:
 
 class SandboxApplication : public Core::Application {
   void OnStart() override {
+    vfs = GetAppVFS();
 
     GetSubsystemManager()
-        .RegisterSubsystem<SDL::Windowing::MESDLWindowingSubsystem>(
+        ->RegisterSubsystem<SDL::Windowing::MESDLWindowingSubsystem>(
             SDL::Windowing::WindowInfo{
                 .Width = 800, .Height = 600, .Title = "Hello, World!"});
     wnd = GetSubsystemManager()
-              .GetSubsystem<SDL::Windowing::MESDLWindowingSubsystem>();
+              ->GetSubsystem<SDL::Windowing::MESDLWindowingSubsystem>();
 
     GetSubsystemManager()
-        .RegisterSubsystem<SDL::Graphics::MESDLGraphicsSubsystem>(
+        ->RegisterSubsystem<SDL::Graphics::MESDLGraphicsSubsystem>(
             wnd->GetSDLWindow());
     graphics = GetSubsystemManager()
-                   .GetSubsystem<SDL::Graphics::MESDLGraphicsSubsystem>();
+                   ->GetSubsystem<SDL::Graphics::MESDLGraphicsSubsystem>();
 
-    GetSubsystemManager().RegisterSubsystem<SDL::DearImGui::MESDLImGui>(
+    GetSubsystemManager()->RegisterSubsystem<SDL::DearImGui::MESDLImGui>(
         wnd->GetSDLWindow(), &graphics->GetRenderer());
 
-    GetSubsystemManager().RegisterSubsystem<SandboxSubsystem>();
+    GetSubsystemManager()->RegisterSubsystem<SandboxSubsystem>();
   }
 };
 

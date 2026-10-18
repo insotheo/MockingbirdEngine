@@ -12,4 +12,6 @@
 
 #include "Event/Event.hpp"
 
-#include "Core/FileSys.hpp"
+#include "VFS/VFS.hpp"
+#include "VFS/VFSInfos.hpp"
+#include "VFS/VFSPhysical.hpp"
