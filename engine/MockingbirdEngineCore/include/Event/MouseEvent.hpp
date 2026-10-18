@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/InputDefinitions.hpp"
 #include "Event/Event.hpp"
 #include <format>
 
@@ -22,30 +23,30 @@ private:
 
 class ME_EVENT(MouseButtonPressedEvent) {
 public:
-  MouseButtonPressedEvent(uint8_t button) : m_Button(button) {}
+  MouseButtonPressedEvent(MouseButton button) : m_Button(button) {}
 
-  inline uint8_t GetButton() const { return m_Button; }
+  inline MouseButton GetButton() const { return m_Button; }
 
   inline std::string ToString() const override {
     return std::format("Mouse button pressed event({})", m_Button);
   }
 
 private:
-  uint8_t m_Button;
+  MouseButton m_Button;
 };
 
 class ME_EVENT(MouseButtonReleasedEvent) {
 public:
-  MouseButtonReleasedEvent(uint8_t button) : m_Button(button) {}
+  MouseButtonReleasedEvent(MouseButton button) : m_Button(button) {}
 
-  inline uint8_t GetButton() const { return m_Button; }
+  inline MouseButton GetButton() const { return m_Button; }
 
   inline std::string ToString() const override {
     return std::format("Mouse button released event({})", m_Button);
   }
 
 private:
-  uint8_t m_Button;
+  MouseButton m_Button;
 };
 
 class ME_EVENT(MouseScrollEvent) {
