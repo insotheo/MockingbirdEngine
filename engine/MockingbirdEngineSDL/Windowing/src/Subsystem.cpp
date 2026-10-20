@@ -1,4 +1,4 @@
-#include "Subsystem.hpp"
+#include "Windowing/Subsystem.hpp"
 
 #include <Core/Log.hpp>
 #include <Event/KeyboardEvent.hpp>
@@ -26,7 +26,8 @@ void MESDLWindowingSubsystem::OnBegin() {
   m_App = Core::Application::GetApp();
 }
 
-void MESDLWindowingSubsystem::OnUpdate(const Core::Time &time) {
+void MESDLWindowingSubsystem::OnUpdate(Core::Scene &scene,
+                                       const Core::Time &time) {
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
     if (event.type == SDL_EVENT_QUIT) {

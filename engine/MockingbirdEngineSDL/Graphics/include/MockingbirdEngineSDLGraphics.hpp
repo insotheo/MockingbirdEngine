@@ -1,9 +1,11 @@
 #pragma once
 
-#include "BufferLayout.hpp"
-#include "Descriptors.hpp"
-#include "GraphicsHandle.hpp"
+#include "Graphics/BufferLayout.hpp"
+#include "Graphics/Descriptors.hpp"
+#include "Graphics/GraphicsHandle.hpp"
 
-#include "Renderer.hpp"
+#include "Graphics/Renderer.hpp"
 
-#include "Subsystem.hpp"
+#include "Graphics/Subsystem.hpp"
+
+#include "Graphics/Component.hpp"

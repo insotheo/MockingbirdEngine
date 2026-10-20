@@ -1,5 +1,5 @@
 #pragma once
 
-#include "WindowInfo.hpp"
+#include "Windowing/WindowInfo.hpp"
 
-#include "Subsystem.hpp"
+#include "Windowing/Subsystem.hpp"

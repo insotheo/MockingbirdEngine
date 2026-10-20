@@ -1,6 +1,6 @@
 #pragma once
 
-#include "WindowInfo.hpp"
+#include "Windowing/WindowInfo.hpp"
 #include <Core/Application.hpp>
 #include <Core/Subsystem.hpp>
 #include <Core/Time.hpp>
@@ -12,7 +12,7 @@ public:
   MESDLWindowingSubsystem(const WindowInfo &info) : m_WndInfo(info) {}
 
   void OnBegin() override;
-  void OnUpdate(const Core::Time &time) override;
+  void OnUpdate(Core::Scene &scene, const Core::Time &time) override;
   void OnShutdown() override;
 
   inline SDL_Window *GetSDLWindow() const { return m_Window; }

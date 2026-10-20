@@ -41,7 +41,7 @@ void Application::Run() {
     m_Time.TotalTime += dt;
     m_Time.FrameCount++;
 
-    m_SubsystemManager.UpdateAll(m_Time);
+    m_SubsystemManager.UpdateAll(m_CurrentScene, m_Time);
 
     if (!m_IsRunning)
       break;
@@ -49,7 +49,7 @@ void Application::Run() {
     if (m_PreRenderCallback) {
       m_PreRenderCallback();
     }
-    m_SubsystemManager.RenderAll();
+    m_SubsystemManager.RenderAll(m_CurrentScene);
     if (m_PostRenderCallback) {
       m_PostRenderCallback();
     }

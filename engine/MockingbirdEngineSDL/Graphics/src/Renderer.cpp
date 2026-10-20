@@ -1,5 +1,4 @@
-#include "Renderer.hpp"
-#include "GraphicsHandle.hpp"
+#include "Graphics/Renderer.hpp"
 
 #include <Core/Log.hpp>
 #include <cstring>

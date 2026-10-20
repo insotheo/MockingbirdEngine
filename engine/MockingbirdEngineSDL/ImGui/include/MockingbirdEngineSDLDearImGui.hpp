@@ -21,8 +21,8 @@ public:
   void OnBegin() override;
   void OnShutdown() override;
   void OnEvent(Core::Event &event) override;
-  void OnUpdate(const Core::Time &time) override;
-  void OnRender() override;
+  void OnUpdate(Core::Scene &scene, const Core::Time &time) override;
+  void OnRender(Core::Scene &scene) override;
 
 private:
   SDL_Window *m_Wnd;

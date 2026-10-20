@@ -17,6 +17,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
+FetchContent_Declare(
+    entt
+    GIT_REPOSITORY https://github.com/skypjack/entt.git
+    GIT_TAG 85c6bba014049b5de8fad49d25424df2f1f6a8c1
+)
+FetchContent_MakeAvailable(entt)
+
 
 add_library(MockingbirdEngineCore STATIC ${ENGINE_CORE})
 
@@ -25,7 +32,9 @@ target_include_directories(MockingbirdEngineCore
 )
 
 target_link_libraries(MockingbirdEngineCore
-    PUBLIC glm::glm
+    PUBLIC
+        glm::glm
+        EnTT::EnTT
 )
 
 target_compile_definitions(MockingbirdEngineCore

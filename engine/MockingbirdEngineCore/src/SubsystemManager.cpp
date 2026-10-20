@@ -2,20 +2,21 @@
 
 namespace Mockingbird::Core {
 
-void SubsystemManager::UpdateAll(const Time &time) {
+void SubsystemManager::UpdateAll(Scene &scene, const Time &time) {
   for (auto &system : m_Subsystems)
-    system->OnUpdate(time);
+    system->OnUpdate(scene, time);
 }
 
-void SubsystemManager::RenderAll() {
+void SubsystemManager::RenderAll(Scene &scene) {
   for (auto &system : m_Subsystems) {
-    if (system.get()->GetRenderOrder() == RenderOrder::Regular)
-      system->OnRender();
+    if (system.get()->GetRenderOrder() == RenderOrder::Regular ||
+        true) // TODO: get rid of RenderOrder:: ... somehow
+      system->OnRender(scene);
   }
 
   for (auto &system : m_Subsystems) { // UI on top
     if (system.get()->GetRenderOrder() == RenderOrder::UI)
-      system->OnRender();
+      system->OnRender(scene);
   }
 }
 

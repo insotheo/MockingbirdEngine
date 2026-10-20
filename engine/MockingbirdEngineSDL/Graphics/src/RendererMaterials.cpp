@@ -1,5 +1,5 @@
 #include "Core/Math.hpp"
-#include "Renderer.hpp"
+#include "Graphics/Renderer.hpp"
 
 #include <Core/Log.hpp>
 #include <cstring>

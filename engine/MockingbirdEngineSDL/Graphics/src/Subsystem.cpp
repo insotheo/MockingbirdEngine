@@ -1,5 +1,6 @@
-#include "Subsystem.hpp"
+#include "Graphics/Subsystem.hpp"
 
+#include "Graphics/Component.hpp"
 #include <Core/Application.hpp>
 #include <Core/Log.hpp>
 
@@ -20,6 +21,23 @@ void MESDLGraphicsSubsystem::OnBegin() {
 
   Core::Application::GetApp()->SetRenderCallbacks(
       [&]() { m_Renderer.StartFrame(); }, [&]() { m_Renderer.EndFrame(); });
+}
+
+void MESDLGraphicsSubsystem::OnRender(Core::Scene &scene) {
+  auto &registry = scene.GetRegistry();
+
+  m_Renderer.BeginDraw2D();
+  auto view = registry.view<const MEComponent(Renderable2D)>();
+
+  for (auto entity : view) {
+    const auto &renderable2D =
+        view.get<const MEComponent(Renderable2D)>(entity);
+
+    m_Renderer.DrawMesh(renderable2D.Mesh, renderable2D.Material,
+                        renderable2D.Texture, renderable2D.Pipeline);
+  }
+
+  m_Renderer.EndDraw2D();
 }
 
 void MESDLGraphicsSubsystem::OnShutdown() {

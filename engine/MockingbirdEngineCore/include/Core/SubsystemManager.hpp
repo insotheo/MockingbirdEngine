@@ -41,8 +41,8 @@ public:
     return nullptr;
   }
 
-  void UpdateAll(const Time &time);
-  void RenderAll();
+  void UpdateAll(Scene &scene, const Time &time);
+  void RenderAll(Scene &scene);
   void OnEventAll(Event &event);
   void ShutdownAll();
 

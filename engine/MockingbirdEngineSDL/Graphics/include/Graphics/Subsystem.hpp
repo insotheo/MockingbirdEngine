@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ECS/Scene.hpp"
 #include "Renderer.hpp"
 #include <Core/Subsystem.hpp>
 #include <Core/Time.hpp>
@@ -12,6 +13,7 @@ public:
 
   void OnBegin() override;
   void OnShutdown() override;
+  void OnRender(Core::Scene &scene) override;
 
   inline Renderer &GetRenderer() { return m_Renderer; }
 

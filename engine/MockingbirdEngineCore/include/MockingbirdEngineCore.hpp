@@ -15,3 +15,8 @@
 #include "VFS/VFS.hpp"
 #include "VFS/VFSInfos.hpp"
 #include "VFS/VFSPhysical.hpp"
+
+#include "ECS/Components.hpp"
+#include "ECS/Entity.hpp"
+#include "ECS/Scene.hpp"
+#include "ECS/SceneHandle.hpp"

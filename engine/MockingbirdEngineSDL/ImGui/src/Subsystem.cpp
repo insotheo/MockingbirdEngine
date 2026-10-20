@@ -28,7 +28,7 @@ void MESDLImGui::OnBegin() {
   m_Initialized = true;
 }
 
-void MESDLImGui::OnUpdate(const Core::Time &time) {
+void MESDLImGui::OnUpdate(Core::Scene &scene, const Core::Time &time) {
   if (!m_Initialized)
     return;
 
@@ -37,7 +37,7 @@ void MESDLImGui::OnUpdate(const Core::Time &time) {
   ImGui::NewFrame();
 }
 
-void MESDLImGui::OnRender() {
+void MESDLImGui::OnRender(Core::Scene &scene) {
   if (!m_Initialized)
     return;
 

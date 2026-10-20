@@ -11,3 +11,4 @@ A simple game engine made for nothing but fun
 - [Dear ImGui](https://github.com/ocornut/imgui)
 - [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross)
 - [stb](https://github.com/nothings/stb)
+- [EnTT](https://github.com/skypjack/entt/)

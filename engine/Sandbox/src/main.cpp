@@ -9,15 +9,21 @@
 
 using namespace Mockingbird;
 
+float verticies[] = {
+    // clang-format off
+        -0.8f, 0.8f, 1.0f, 0.0f,
+        -0.8f, -0.8f, 0.0f, 0.0f,
+        0.8f, -0.8f, 0.0f, 1.0f,
+        0.8f, 0.8f, 1.0f, 1.0f,
+    // clang-format on
+};
+uint16_t indicies[] = {0, 1, 2, 2, 3, 0};
+
+entt::entity spriteID;
+
 Core::VFS *vfs;
 SDL::Windowing::MESDLWindowingSubsystem *wnd;
 SDL::Graphics::MESDLGraphicsSubsystem *graphics;
-
-SDL::Graphics::ShaderHandle shader;
-SDL::Graphics::TextureHandle texture;
-SDL::Graphics::MaterialHandle mat;
-SDL::Graphics::MeshHandle mesh;
-SDL::Graphics::PipelineHandle pipeline;
 
 class SandboxSubsystem : public Core::MESubsystem {
 public:
@@ -32,21 +38,11 @@ public:
         vfs->Open("root/assets/hello.frag.spv")->GetBytes();
     Core::ImageFile img = vfs->Open("root/assets/testTexture.png")->GetImage();
 
-    shader = graphics->GetRenderer().CreateShader(
+    auto shader = graphics->GetRenderer().CreateShader(
         vertCode.data(), vertCode.size(), fragCode.data(), fragCode.size());
-    pipeline = graphics->GetRenderer().CreateGraphicsPipeline(shader);
-    mat = graphics->GetRenderer().CreateMaterial(shader, "MatBuffer");
-    texture = graphics->GetRenderer().CreateTexture(img);
-
-    float verticies[] = {
-        // clang-format off
-        -0.8f, 0.8f, 1.0f, 0.0f,
-        -0.8f, -0.8f, 0.0f, 0.0f,
-        0.8f, -0.8f, 0.0f, 1.0f,
-        0.8f, 0.8f, 1.0f, 1.0f,
-        // clang-format on
-    };
-    uint16_t indicies[] = {0, 1, 2, 2, 3, 0};
+    auto pipeline = graphics->GetRenderer().CreateGraphicsPipeline(shader);
+    auto mat = graphics->GetRenderer().CreateMaterial(shader, "MatBuffer");
+    auto texture = graphics->GetRenderer().CreateTexture(img);
 
     auto vb = graphics->GetRenderer().CreateVertexBuffer(
         &verticies, sizeof(verticies) / sizeof(float),
@@ -55,10 +51,19 @@ public:
     auto ib = graphics->GetRenderer().CreateIndexBuffer(
         &indicies, sizeof(indicies) / sizeof(uint16_t), sizeof(uint16_t));
 
-    mesh = graphics->GetRenderer().CreateMesh(vb, ib);
+    auto mesh = graphics->GetRenderer().CreateMesh(vb, ib);
+
+    Core::Scene testScene;
+    Core::Entity sprite = testScene.CreateEntity();
+    sprite.AddComponent<SDL::Graphics::MEComponent(Renderable2D)>(
+        mesh, mat, texture, pipeline);
+
+    spriteID = static_cast<entt::entity>(sprite);
+
+    Core::Application::SetCurrentScene(std::move(testScene));
   }
 
-  void OnUpdate(const Core::Time &time) override {
+  void OnUpdate(Core::Scene &scene, const Core::Time &time) override {
     m_FpsTimer += time.DeltaTime;
     m_FrameCount++;
 
@@ -72,14 +77,12 @@ public:
     ImGui::Text("FPS: %.1f", m_LastDisplaydFps);
     ImGui::End();
 
-    graphics->GetRenderer().MaterialSetFloat(
-        mat, "uTime", static_cast<float>(time.TotalTime));
-  }
+    Core::Entity sprite(spriteID, &scene); // update sprite
 
-  void OnRender() override {
-    graphics->GetRenderer().BeginDraw2D();
-    graphics->GetRenderer().DrawMesh(mesh, mat, texture, pipeline);
-    graphics->GetRenderer().EndDraw2D();
+    graphics->GetRenderer().MaterialSetFloat(
+        sprite.GetComponent<SDL::Graphics::MEComponent(Renderable2D)>()
+            .Material,
+        "uTime", static_cast<float>(time.TotalTime));
   }
 
   void OnShutdown() override {}
