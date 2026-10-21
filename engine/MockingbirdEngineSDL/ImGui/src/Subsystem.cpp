@@ -25,6 +25,11 @@ void MESDLImGui::OnBegin() {
   ImGui_ImplSDL3_InitForSDLGPU(m_Wnd);
   ImGui_ImplSDLGPU3_Init(&initInfo);
 
+  m_Renderer->RegisterRenderLayer(
+      400, "SDL_IMGUI_RENDER_LAYER",
+      [this](SDL_GPUCommandBuffer *cmd) { this->PrepareRender(cmd); },
+      [this](SDL_GPURenderPass *pass) { this->RenderImGui(pass); });
+
   m_Initialized = true;
 }
 
@@ -37,7 +42,15 @@ void MESDLImGui::OnUpdate(Core::Scene &scene, const Core::Time &time) {
   ImGui::NewFrame();
 }
 
-void MESDLImGui::OnRender(Core::Scene &scene) {
+void MESDLImGui::PrepareRender(SDL_GPUCommandBuffer *cmd) {
+  if (!m_Initialized || !cmd)
+    return;
+
+  ImGui::Render();
+  ImGui_ImplSDLGPU3_PrepareDrawData(ImGui::GetDrawData(), cmd);
+}
+
+void MESDLImGui::RenderImGui(SDL_GPURenderPass *pass) {
   if (!m_Initialized)
     return;
 
@@ -47,13 +60,8 @@ void MESDLImGui::OnRender(Core::Scene &scene) {
     return;
   }
 
-  ImGui::Render();
-  ImGui_ImplSDLGPU3_PrepareDrawData(ImGui::GetDrawData(), cmdBuff);
-
-  m_Renderer->BeginDraw2D();
   ImGui_ImplSDLGPU3_RenderDrawData(ImGui::GetDrawData(), cmdBuff,
                                    m_Renderer->GetGPUCurrentRenderPass());
-  m_Renderer->EndDraw2D();
 }
 
 void MESDLImGui::OnEvent(Core::Event &event) {

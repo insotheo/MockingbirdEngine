@@ -9,14 +9,7 @@ void SubsystemManager::UpdateAll(Scene &scene, const Time &time) {
 
 void SubsystemManager::RenderAll(Scene &scene) {
   for (auto &system : m_Subsystems) {
-    if (system.get()->GetRenderOrder() == RenderOrder::Regular ||
-        true) // TODO: get rid of RenderOrder:: ... somehow
-      system->OnRender(scene);
-  }
-
-  for (auto &system : m_Subsystems) { // UI on top
-    if (system.get()->GetRenderOrder() == RenderOrder::UI)
-      system->OnRender(scene);
+    system->OnRender(scene);
   }
 }
 

@@ -5,11 +5,10 @@
 
 namespace Mockingbird::SDL::Graphics {
 
-struct MEComponent(Renderable2D) {
+struct MEComponent(Renderable) {
   MeshHandle Mesh;
-  MaterialHandle Material;
-  TextureHandle Texture;
   PipelineHandle Pipeline;
+  MaterialHandle Material;
 };
 
 } // namespace Mockingbird::SDL::Graphics

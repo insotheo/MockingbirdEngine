@@ -10,9 +10,8 @@ namespace Mockingbird::SDL::DearImGui {
 class MESDLImGui : public Core::MESubsystem {
 public:
   MESDLImGui(SDL_Window *window, Graphics::Renderer *renderer)
-      : m_Wnd(window), m_Renderer(renderer), m_Gpu(renderer->GetGPU()) {
-    m_RenderOrder = Core::RenderOrder::UI;
-  }
+      : m_Wnd(window), m_Renderer(renderer), m_Gpu(renderer->GetGPU()) {}
+
   ~MESDLImGui() {
     m_Wnd = nullptr;
     m_Gpu = nullptr;
@@ -22,12 +21,14 @@ public:
   void OnShutdown() override;
   void OnEvent(Core::Event &event) override;
   void OnUpdate(Core::Scene &scene, const Core::Time &time) override;
-  void OnRender(Core::Scene &scene) override;
 
 private:
   SDL_Window *m_Wnd;
   SDL_GPUDevice *m_Gpu;
   Graphics::Renderer *m_Renderer;
+
+  void PrepareRender(SDL_GPUCommandBuffer *cmd);
+  void RenderImGui(SDL_GPURenderPass *pass);
 
   bool m_Initialized = false;
 };

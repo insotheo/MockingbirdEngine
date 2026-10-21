@@ -236,7 +236,7 @@ SDL_GPUShader *Renderer::CreateShaderStage(void *code, size_t codeSize,
   info.code = reinterpret_cast<const uint8_t *>(code);
   info.entrypoint = desc.EntryPoint.empty() ? "main" : desc.EntryPoint.c_str();
   info.stage = stage;
-  info.format = SDL_GPU_SHADERFORMAT_SPIRV; // TODO: multi shader type support
+  info.format = SDL_GPU_SHADERFORMAT_SPIRV;
 
   info.num_samplers = desc.SamplerCount;
   info.num_storage_buffers = desc.StorageBufferCount;
@@ -298,6 +298,7 @@ ShaderHandle Renderer::CreateShader(void *vert, size_t vertSize, void *frag,
                          .VertexLayout = ReflectVertexLayout(vertCompiler),
                          .VertexUniforms = std::move(vertexUniforms),
                          .FragmentUniforms = std::move(fragmentUniforms),
+                         .TexturesCount = autoDesc.Fragment.SamplerCount,
                          .Version = 1};
 
   const uint32_t index = static_cast<uint32_t>(m_Shaders.size());
@@ -435,68 +436,7 @@ PipelineHandle Renderer::CreateGraphicsPipeline(ShaderHandle shader,
   return static_cast<uint32_t>(m_Pipelines.size() - 1);
 }
 
-void Renderer::DrawMesh(MeshHandle meshHnd, MaterialHandle matHnd,
-                        TextureHandle textureHnd, PipelineHandle pipelineHnd) {
-  if (!m_IsDrawing || !m_CurrentRenderPass ||
-      meshHnd.GetIndex() >= m_Meshes.size() ||
-      pipelineHnd >= m_Pipelines.size())
-    return;
-
-  if (matHnd) {
-    if (matHnd.GetIndex() >= m_Materials.size() ||
-        matHnd.GetVersion() != m_Materials[matHnd.GetIndex()].Version)
-      return;
-  }
-  if (textureHnd) {
-    if (textureHnd.GetIndex() >= m_Textures.size() ||
-        textureHnd.GetVersion() != m_Textures[textureHnd.GetIndex()].Version)
-      return;
-  }
-
-  const MeshInternal &mesh = m_Meshes[meshHnd.GetIndex()];
-  const VertexBufferInternal &vb = m_VBs[mesh.VertexBuffer.GetIndex()];
-  const IndexBufferInternal &ib = m_IBs[mesh.IndexBuffer.GetIndex()];
-
-  SDL_GPUGraphicsPipeline *pipeline = m_Pipelines[pipelineHnd];
-
-  SDL_BindGPUGraphicsPipeline(m_CurrentRenderPass, pipeline);
-
-  SDL_GPUBufferBinding vertBind{.buffer = vb.GPUBuffer, .offset = 0};
-  SDL_BindGPUVertexBuffers(m_CurrentRenderPass, 0, &vertBind, 1);
-
-  SDL_GPUBufferBinding indBind{.buffer = ib.GPUBuffer, .offset = 0};
-  SDL_BindGPUIndexBuffer(m_CurrentRenderPass, &indBind, ib.IndexFormat);
-
-  if (matHnd) {
-    const MaterialInternal &mat = m_Materials[matHnd.GetIndex()];
-    if (!mat.UniformCPUBuffer.empty()) {
-      if (mat.IsFragment) {
-        SDL_PushGPUFragmentUniformData(
-            m_CurrentCmdBuff, mat.Binding, mat.UniformCPUBuffer.data(),
-            static_cast<uint32_t>(mat.UniformCPUBuffer.size()));
-      } else {
-        SDL_PushGPUVertexUniformData(
-            m_CurrentCmdBuff, mat.Binding, mat.UniformCPUBuffer.data(),
-            static_cast<uint32_t>(mat.UniformCPUBuffer.size()));
-      }
-    }
-  }
-
-  if (textureHnd) {
-    const TextureInternal &texture = m_Textures[textureHnd.GetIndex()];
-
-    SDL_GPUTextureSamplerBinding textSamplBind{
-        .texture = texture.Texture,
-        .sampler = m_DefaultSampler,
-    };
-
-    SDL_BindGPUFragmentSamplers(m_CurrentRenderPass, 0, &textSamplBind, 1);
-  }
-
-  SDL_DrawGPUIndexedPrimitives(m_CurrentRenderPass, ib.Count, 1, 0, 0, 0);
-}
-
-void Renderer::StartFrame() {
+void Renderer::BeginFrame() {
   m_CurrentCmdBuff = SDL_AcquireGPUCommandBuffer(m_Device);
   if (!m_CurrentCmdBuff)
     return;
@@ -508,46 +448,104 @@ void Renderer::StartFrame() {
     m_CurrentCmdBuff = nullptr;
     return;
   }
-
-  m_FirstPassInFrame = true;
 }
 
-void Renderer::EndFrame() {
-  if (m_CurrentCmdBuff) {
-    SDL_SubmitGPUCommandBuffer(m_CurrentCmdBuff);
-    m_CurrentCmdBuff = nullptr;
-  }
-  m_CurrentTargetTexture = nullptr;
-}
-
-void Renderer::BeginDraw2D() {
-  if (m_IsDrawing || !m_CurrentCmdBuff)
+void Renderer::EndFrameAndFlush() {
+  if (!m_CurrentCmdBuff || !m_CurrentTargetTexture) {
+    m_RenderCommands.clear();
     return;
+  }
+
+  std::sort(m_RenderCommands.begin(), m_RenderCommands.end(),
+            [](const auto &a, const auto &b) {
+              if (a.Pipeline != b.Pipeline)
+                return a.Pipeline < b.Pipeline;
+              return a.Material.Id < b.Material.Id;
+            });
+
+  for (const auto &layer : m_RenderLayers) {
+    if (layer.PreRenderCallback)
+      layer.PreRenderCallback(m_CurrentCmdBuff);
+  }
 
   SDL_GPUColorTargetInfo colorTargetInfo{};
   colorTargetInfo.texture = m_CurrentTargetTexture;
   colorTargetInfo.clear_color = m_ClearColor;
-  colorTargetInfo.load_op =
-      m_FirstPassInFrame ? SDL_GPU_LOADOP_CLEAR : SDL_GPU_LOADOP_LOAD;
+  colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
   colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
 
   m_CurrentRenderPass =
       SDL_BeginGPURenderPass(m_CurrentCmdBuff, &colorTargetInfo, 1, nullptr);
 
-  m_IsDrawing = true;
-  m_FirstPassInFrame = false;
-}
+  SDL_GPUGraphicsPipeline *lastPipeline = nullptr;
 
-void Renderer::EndDraw2D() {
-  if (!m_IsDrawing)
-    return;
+  for (const auto &cmd : m_RenderCommands) {
+    SDL_GPUGraphicsPipeline *pipeline = m_Pipelines[cmd.Pipeline];
 
-  if (m_CurrentRenderPass) {
-    SDL_EndGPURenderPass(m_CurrentRenderPass);
-    m_CurrentRenderPass = nullptr;
+    // bind pipeline
+    if (pipeline != lastPipeline) {
+      SDL_BindGPUGraphicsPipeline(m_CurrentRenderPass, pipeline);
+      lastPipeline = pipeline;
+    }
+
+    // bind geometry
+    const MeshInternal &mesh = m_Meshes[cmd.Mesh.GetIndex()];
+    const VertexBufferInternal &vb = m_VBs[mesh.VertexBuffer.GetIndex()];
+    const IndexBufferInternal &ib = m_IBs[mesh.IndexBuffer.GetIndex()];
+
+    SDL_GPUBufferBinding vertBind{.buffer = vb.GPUBuffer, .offset = 0};
+    SDL_BindGPUVertexBuffers(m_CurrentRenderPass, 0, &vertBind, 1);
+    SDL_GPUBufferBinding indBind{.buffer = ib.GPUBuffer, .offset = 0};
+    SDL_BindGPUIndexBuffer(m_CurrentRenderPass, &indBind, ib.IndexFormat);
+
+    // bind material and textures
+    if (cmd.Material) {
+      const MaterialInternal &mat = m_Materials[cmd.Material.GetIndex()];
+      if (!mat.UniformCPUBuffer.empty()) {
+        if (mat.IsFragment) {
+          SDL_PushGPUFragmentUniformData(
+              m_CurrentCmdBuff, mat.Binding, mat.UniformCPUBuffer.data(),
+              static_cast<uint32_t>(mat.UniformCPUBuffer.size()));
+        } else {
+          SDL_PushGPUVertexUniformData(
+              m_CurrentCmdBuff, mat.Binding, mat.UniformCPUBuffer.data(),
+              static_cast<uint32_t>(mat.UniformCPUBuffer.size()));
+        }
+      }
+
+      if (!mat.Textures.empty()) {
+        for (size_t i = 0; i < mat.Textures.size(); ++i) {
+          const TextureHandle tHnd = mat.Textures[i];
+          if (!tHnd)
+            continue;
+
+          const TextureInternal &texture = m_Textures[tHnd.GetIndex()];
+
+          SDL_GPUTextureSamplerBinding textSamplBinding{
+              .texture = texture.Texture, .sampler = m_DefaultSampler};
+
+          SDL_BindGPUFragmentSamplers(m_CurrentRenderPass,
+                                      static_cast<uint32_t>(i),
+                                      &textSamplBinding, 1);
+        }
+      }
+    }
+
+    SDL_DrawGPUIndexedPrimitives(m_CurrentRenderPass, ib.Count, 1, 0, 0, 0);
   }
 
-  m_IsDrawing = false;
+  for (const auto &layer : m_RenderLayers) {
+    if (layer.Callback)
+      layer.Callback(m_CurrentRenderPass);
+  }
+
+  SDL_EndGPURenderPass(m_CurrentRenderPass);
+  SDL_SubmitGPUCommandBuffer(m_CurrentCmdBuff);
+
+  m_CurrentRenderPass = nullptr;
+  m_CurrentCmdBuff = nullptr;
+  m_CurrentTargetTexture = nullptr;
+  m_RenderCommands.clear();
 }
 
 } // namespace Mockingbird::SDL::Graphics

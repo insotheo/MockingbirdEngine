@@ -7,13 +7,10 @@
 #include "ECS/SceneHandle.hpp"
 #include "Event/Event.hpp"
 #include "VFS/VFS.hpp"
-#include <functional>
 
 namespace Mockingbird::Core {
 class Application {
 public:
-  using RenderCallback = std::function<void()>;
-
   Application();
   virtual ~Application();
 
@@ -38,11 +35,6 @@ public:
     s_App->m_CurrentScene = std::move(scene);
   }
 
-  inline void SetRenderCallbacks(RenderCallback pre, RenderCallback post) {
-    m_PreRenderCallback = std::move(pre);
-    m_PostRenderCallback = std::move(post);
-  }
-
 private:
   static Application *s_App;
   void Terminate();
@@ -52,8 +44,5 @@ private:
   SubsystemManager m_SubsystemManager;
   VFS m_VFS;
   Scene m_CurrentScene;
-
-  RenderCallback m_PreRenderCallback = nullptr;
-  RenderCallback m_PostRenderCallback = nullptr;
 };
 } // namespace Mockingbird::Core

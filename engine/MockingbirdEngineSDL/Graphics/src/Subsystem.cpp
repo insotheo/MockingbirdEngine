@@ -18,26 +18,22 @@ void MESDLGraphicsSubsystem::OnBegin() {
     ME_LOG_CORE_ERROR("Failed to create Renderer!");
     return;
   }
-
-  Core::Application::GetApp()->SetRenderCallbacks(
-      [&]() { m_Renderer.StartFrame(); }, [&]() { m_Renderer.EndFrame(); });
 }
 
 void MESDLGraphicsSubsystem::OnRender(Core::Scene &scene) {
-  auto &registry = scene.GetRegistry();
+  m_Renderer.BeginFrame();
 
-  m_Renderer.BeginDraw2D();
-  auto view = registry.view<const MEComponent(Renderable2D)>();
+  auto &registry = scene.GetRegistry();
+  auto view = registry.view<const MEComponent(Renderable)>();
 
   for (auto entity : view) {
-    const auto &renderable2D =
-        view.get<const MEComponent(Renderable2D)>(entity);
+    const auto &renderable = view.get<const MEComponent(Renderable)>(entity);
 
-    m_Renderer.DrawMesh(renderable2D.Mesh, renderable2D.Material,
-                        renderable2D.Texture, renderable2D.Pipeline);
+    m_Renderer.SubmitMesh(renderable.Mesh, renderable.Pipeline,
+                          renderable.Material);
   }
 
-  m_Renderer.EndDraw2D();
+  m_Renderer.EndFrameAndFlush();
 }
 
 void MESDLGraphicsSubsystem::OnShutdown() {

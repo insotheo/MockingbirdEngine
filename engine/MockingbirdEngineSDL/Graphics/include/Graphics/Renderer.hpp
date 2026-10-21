@@ -6,6 +6,7 @@
 #include <Core/Math.hpp>
 #include <SDL3/SDL.h>
 #include <VFS/VFSInfos.hpp>
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <spirv_cross.hpp>
@@ -35,6 +36,34 @@ public:
   void SetVSync(bool state);
   inline bool IsVSyncEnabled() const { return m_VSync; }
 
+  // queue
+  inline void RegisterRenderLayer(
+      uint32_t priority, const std::string &name,
+      std::function<void(SDL_GPUCommandBuffer *)> preRenderCallback,
+      std::function<void(SDL_GPURenderPass *)> callback) {
+    m_RenderLayers.push_back({priority, preRenderCallback, callback, name});
+    std::sort(
+        m_RenderLayers.begin(), m_RenderLayers.end(),
+        [](const auto &a, const auto &b) { return a.Priority < b.Priority; });
+  }
+
+  inline void SubmitMesh(MeshHandle meshHnd, PipelineHandle pipelineHnd,
+                         MaterialHandle matHnd) {
+    if (meshHnd.GetIndex() >= m_Meshes.size() ||
+        pipelineHnd >= m_Pipelines.size() ||
+        matHnd.GetIndex() >= m_Materials.size())
+      return;
+
+    if (meshHnd.GetVersion() != m_Meshes[meshHnd.GetIndex()].Version ||
+        matHnd.GetVersion() != m_Materials[matHnd.GetIndex()].Version)
+      return;
+
+    m_RenderCommands.push_back({meshHnd, pipelineHnd, matHnd});
+  }
+
+  void BeginFrame();
+  void EndFrameAndFlush();
+
   VertexBufferHandle CreateVertexBuffer(void *vertices, uint32_t verticesCount,
                                         uint32_t vertexStride);
 
@@ -56,9 +85,6 @@ public:
                                 bool isFragment = true);
 
   TextureHandle CreateTexture(const Core::ImageFile &imgData);
-
-  void DrawMesh(MeshHandle meshHnd, MaterialHandle matHnd,
-                TextureHandle textureHnd, PipelineHandle pipelineHnd);
 
   inline void SetClearColor(float r, float g, float b, float alpha = 1.0f) {
     m_ClearColor = SDL_FColor{r, g, b, alpha};
@@ -84,6 +110,8 @@ public:
                        const Core::MEMat3 &val);
   void MaterialSetMat4(MaterialHandle hnd, const std::string &property,
                        const Core::MEMat4 &val);
+  void MaterialSetTexture(MaterialHandle hnd, size_t index,
+                          TextureHandle texture);
 
   // shader getters
   inline const BufferLayout *GetVertexLayout(ShaderHandle shader) const {
@@ -94,14 +122,20 @@ public:
     return &m_Shaders[shader.GetIndex()].VertexLayout;
   }
 
-  void StartFrame();
-  void EndFrame();
-
-  // 2D rendering
-  void BeginDraw2D(); // TODO: camera2D and target texture
-  void EndDraw2D();
-
 private:
+  struct RenderLayer {
+    uint32_t Priority;
+    std::function<void(SDL_GPUCommandBuffer *)> PreRenderCallback;
+    std::function<void(SDL_GPURenderPass *)> Callback;
+    std::string Name;
+  };
+
+  struct RenderCommand {
+    MeshHandle Mesh;
+    PipelineHandle Pipeline;
+    MaterialHandle Material;
+  };
+
   struct TextureInternal {
     SDL_GPUTexture *Texture;
     uint32_t Version;
@@ -140,14 +174,19 @@ private:
     std::unordered_map<std::string, UniformBufferInternal> VertexUniforms;
     std::unordered_map<std::string, UniformBufferInternal> FragmentUniforms;
 
+    uint32_t TexturesCount;
+
     uint32_t Version = 1;
   };
 
   struct MaterialInternal {
-    ShaderHandle ShaderHnd;
+    std::vector<TextureHandle> Textures;
+
     bool IsFragment;
+
     std::vector<uint8_t> UniformCPUBuffer;
     std::unordered_map<std::string, uint32_t> PropertyOffsets;
+
     uint32_t Version;
     uint32_t Binding = 0;
   };
@@ -183,7 +222,10 @@ private:
 
   bool m_VSync = true;
   bool m_IsDrawing = false;
-  bool m_FirstPassInFrame = false;
+
+  // Render queue
+  std::vector<RenderCommand> m_RenderCommands;
+  std::vector<RenderLayer> m_RenderLayers;
 
   // resources
   std::vector<VertexBufferInternal> m_VBs;

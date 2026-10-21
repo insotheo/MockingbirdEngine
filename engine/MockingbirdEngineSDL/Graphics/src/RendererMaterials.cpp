@@ -18,6 +18,7 @@ MaterialHandle Renderer::CreateMaterial(ShaderHandle shaderHnd,
     return MEGraphicsHandleNull;
 
   ShaderInternal &shader = m_Shaders[shaderHnd.GetIndex()];
+
   auto &uniformsMap =
       (isFragment ? shader.FragmentUniforms : shader.VertexUniforms);
   if (!uniformsMap.contains(bufferName)) {
@@ -29,8 +30,10 @@ MaterialHandle Renderer::CreateMaterial(ShaderHandle shaderHnd,
 
   MaterialInternal mat;
   mat.IsFragment = isFragment;
-  mat.ShaderHnd = shaderHnd;
+
   mat.UniformCPUBuffer.resize(ub.Layout.GetStride(), 0);
+  mat.Textures.resize(shader.TexturesCount, MEGraphicsHandleNull);
+
   mat.Binding = ub.Binding;
   mat.Version = 1;
 
@@ -165,6 +168,16 @@ void Renderer::MaterialSetMat4(MaterialHandle hnd, const std::string &property,
     std::memcpy(mat.UniformCPUBuffer.data() + it->second, ptr,
                 4 * 4 * sizeof(float));
   }
+}
+
+void Renderer::MaterialSetTexture(MaterialHandle hnd, size_t index,
+                                  TextureHandle texture) {
+  if (!hnd)
+    return;
+  MaterialInternal &mat = m_Materials[hnd.GetIndex()];
+  if (index >= mat.Textures.size())
+    return;
+  mat.Textures[index] = texture;
 }
 
 } // namespace Mockingbird::SDL::Graphics

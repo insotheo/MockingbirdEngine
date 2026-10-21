@@ -46,13 +46,7 @@ void Application::Run() {
     if (!m_IsRunning)
       break;
 
-    if (m_PreRenderCallback) {
-      m_PreRenderCallback();
-    }
     m_SubsystemManager.RenderAll(m_CurrentScene);
-    if (m_PostRenderCallback) {
-      m_PostRenderCallback();
-    }
   }
 
   Terminate();

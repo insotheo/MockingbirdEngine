@@ -27,8 +27,6 @@ SDL::Graphics::MESDLGraphicsSubsystem *graphics;
 
 class SandboxSubsystem : public Core::MESubsystem {
 public:
-  SandboxSubsystem() { m_RenderOrder = Core::RenderOrder::Regular; }
-
   void OnBegin() override {
     ME_LOG_INFO("Game started");
 
@@ -40,9 +38,12 @@ public:
 
     auto shader = graphics->GetRenderer().CreateShader(
         vertCode.data(), vertCode.size(), fragCode.data(), fragCode.size());
+
     auto pipeline = graphics->GetRenderer().CreateGraphicsPipeline(shader);
+
     auto mat = graphics->GetRenderer().CreateMaterial(shader, "MatBuffer");
     auto texture = graphics->GetRenderer().CreateTexture(img);
+    graphics->GetRenderer().MaterialSetTexture(mat, 0, texture);
 
     auto vb = graphics->GetRenderer().CreateVertexBuffer(
         &verticies, sizeof(verticies) / sizeof(float),
@@ -55,8 +56,8 @@ public:
 
     Core::Scene testScene;
     Core::Entity sprite = testScene.CreateEntity();
-    sprite.AddComponent<SDL::Graphics::MEComponent(Renderable2D)>(
-        mesh, mat, texture, pipeline);
+    sprite.AddComponent<SDL::Graphics::MEComponent(Renderable)>(mesh, pipeline,
+                                                                mat);
 
     spriteID = static_cast<entt::entity>(sprite);
 
@@ -80,8 +81,7 @@ public:
     Core::Entity sprite(spriteID, &scene); // update sprite
 
     graphics->GetRenderer().MaterialSetFloat(
-        sprite.GetComponent<SDL::Graphics::MEComponent(Renderable2D)>()
-            .Material,
+        sprite.GetComponent<SDL::Graphics::MEComponent(Renderable)>().Material,
         "uTime", static_cast<float>(time.TotalTime));
   }
 
