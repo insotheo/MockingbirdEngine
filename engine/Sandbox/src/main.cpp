@@ -19,7 +19,7 @@ float verticies[] = {
 };
 uint16_t indicies[] = {0, 1, 2, 2, 3, 0};
 
-entt::entity spriteID;
+Core::EntityHandle spriteID;
 
 Core::VFS *vfs;
 SDL::Windowing::MESDLWindowingSubsystem *wnd;

@@ -6,10 +6,12 @@
 
 namespace Mockingbird::Core {
 
+using EntityHandle = entt::entity;
+
 class Entity {
 public:
   Entity() = default;
-  Entity(entt::entity handle, Scene *scene)
+  Entity(EntityHandle handle, Scene *scene)
       : m_EntityHnd(handle), m_Scene(scene) {}
 
   template <typename T, typename... Args> T &AddComponent(Args &&...args) {
@@ -25,10 +27,10 @@ public:
     m_Scene->m_Registry.remove<T>(m_EntityHnd);
   }
 
-  operator entt::entity() const { return m_EntityHnd; }
+  operator EntityHandle() const { return m_EntityHnd; }
 
 private:
-  entt::entity m_EntityHnd{entt::null};
+  EntityHandle m_EntityHnd{entt::null};
   Scene *m_Scene = nullptr;
 };
 
