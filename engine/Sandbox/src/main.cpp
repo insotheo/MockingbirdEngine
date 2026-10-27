@@ -1,3 +1,4 @@
+#include "ECS/Entity.hpp"
 #include <MockingbirdEngineCore.hpp>
 #include <MockingbirdEngineSDLDearImGui.hpp>
 #include <MockingbirdEngineSDLGraphics.hpp>
@@ -20,6 +21,7 @@ float verticies[] = {
 uint16_t indicies[] = {0, 1, 2, 2, 3, 0};
 
 Core::EntityHandle spriteID;
+Core::EntityHandle cameraID;
 
 Core::VFS *vfs;
 SDL::Windowing::MESDLWindowingSubsystem *wnd;
@@ -58,8 +60,13 @@ public:
     Core::Entity sprite = testScene.CreateEntity();
     sprite.AddComponent<SDL::Graphics::MEComponent(Renderable)>(mesh, pipeline,
                                                                 mat);
+    sprite.AddComponent<Core::MEComponent(Transform)>();
 
-    spriteID = static_cast<entt::entity>(sprite);
+    Core::Entity camera = testScene.CreateEntity();
+    camera.AddComponent<Core::MEComponent(Camera)>();
+
+    spriteID = static_cast<Core::EntityHandle>(sprite);
+    cameraID = static_cast<Core::EntityHandle>(camera);
 
     Core::Application::SetCurrentScene(std::move(testScene));
   }
@@ -79,10 +86,18 @@ public:
     ImGui::End();
 
     Core::Entity sprite(spriteID, &scene); // update sprite
+    Core::Entity cam(cameraID, &scene);    // update camera
 
     graphics->GetRenderer().MaterialSetFloat(
         sprite.GetComponent<SDL::Graphics::MEComponent(Renderable)>().Material,
         "uTime", static_cast<float>(time.TotalTime));
+
+    cam.GetComponent<Core::MEComponent(Camera)>().CamInstance.Rotate(
+        Core::MEVec3{
+            0.f,
+            0.f,
+            1.0f,
+        });
   }
 
   void OnShutdown() override {}
@@ -100,7 +115,7 @@ class SandboxApplication : public Core::Application {
     GetSubsystemManager()
         ->RegisterSubsystem<SDL::Windowing::MESDLWindowingSubsystem>(
             SDL::Windowing::WindowInfo{
-                .Width = 800, .Height = 600, .Title = "Hello, World!"});
+                .Width = 1280, .Height = 720, .Title = "Hello, World!"});
     wnd = GetSubsystemManager()
               ->GetSubsystem<SDL::Windowing::MESDLWindowingSubsystem>();
 

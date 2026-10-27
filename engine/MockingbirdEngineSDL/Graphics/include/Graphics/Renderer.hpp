@@ -37,6 +37,10 @@ public:
   inline bool IsVSyncEnabled() const { return m_VSync; }
 
   // queue
+  inline void UpdateViewProjMatrix(const Core::MEMat4 &mat) {
+    m_CurrViewProj = mat;
+  }
+
   inline void RegisterRenderLayer(
       uint32_t priority, const std::string &name,
       std::function<void(SDL_GPUCommandBuffer *)> preRenderCallback,
@@ -48,7 +52,7 @@ public:
   }
 
   inline void SubmitMesh(MeshHandle meshHnd, PipelineHandle pipelineHnd,
-                         MaterialHandle matHnd) {
+                         MaterialHandle matHnd, const Core::MEMat4 &modelMat) {
     if (meshHnd.GetIndex() >= m_Meshes.size() ||
         pipelineHnd >= m_Pipelines.size() ||
         matHnd.GetIndex() >= m_Materials.size())
@@ -58,10 +62,12 @@ public:
         matHnd.GetVersion() != m_Materials[matHnd.GetIndex()].Version)
       return;
 
-    m_RenderCommands.push_back({meshHnd, pipelineHnd, matHnd});
+    m_RenderQueue.push_back({meshHnd, pipelineHnd, matHnd, modelMat});
   }
 
-  void BeginFrame();
+  void BeginFrame(const Core::MEMat4 &viewProjMat);
+  void ExecuteRenderPass(SDL_GPUTexture *targetTexture,
+                         const Core::MEVec4 &clearColor);
   void EndFrameAndFlush();
 
   VertexBufferHandle CreateVertexBuffer(void *vertices, uint32_t verticesCount,
@@ -85,10 +91,6 @@ public:
                                 bool isFragment = true);
 
   TextureHandle CreateTexture(const Core::ImageFile &imgData);
-
-  inline void SetClearColor(float r, float g, float b, float alpha = 1.0f) {
-    m_ClearColor = SDL_FColor{r, g, b, alpha};
-  }
 
   // material
   void MaterialSetFloat(MaterialHandle hnd, const std::string &property,
@@ -134,6 +136,7 @@ private:
     MeshHandle Mesh;
     PipelineHandle Pipeline;
     MaterialHandle Material;
+    Core::MEMat4 Model;
   };
 
   struct TextureInternal {
@@ -210,11 +213,13 @@ private:
   SDL_GPUBuffer *UploadDataToGPU(const void *data, uint32_t byteSize,
                                  SDL_GPUBufferUsageFlags usage);
 
+  void SetMaterialPropertyRaw(MaterialHandle hnd, const std::string &property,
+                              const void *srcData, size_t size);
+
 private:
   SDL_GPUDevice *m_Device = nullptr;
   SDL_Window *m_Wnd = nullptr;
 
-  SDL_FColor m_ClearColor = SDL_FColor{0.1f, 0.1f, 0.1f, 1.0f};
   SDL_GPUCommandBuffer *m_CurrentCmdBuff = nullptr;
   SDL_GPURenderPass *m_CurrentRenderPass = nullptr;
   SDL_GPUTexture *m_CurrentTargetTexture = nullptr;
@@ -223,8 +228,15 @@ private:
   bool m_VSync = true;
   bool m_IsDrawing = false;
 
+  // camera
+  Core::MEMat4 m_CurrViewProj{1.f};
+  std::vector<uint8_t> m_FrameBufferUniform;
+  std::unordered_map<std::string, uint32_t> m_FrameBufferPropertyOffsets;
+  std::vector<uint8_t> m_ObjectBufferUniform;
+  std::unordered_map<std::string, uint32_t> m_ObjectBufferPropertyOffsets;
+
   // Render queue
-  std::vector<RenderCommand> m_RenderCommands;
+  std::vector<RenderCommand> m_RenderQueue;
   std::vector<RenderLayer> m_RenderLayers;
 
   // resources

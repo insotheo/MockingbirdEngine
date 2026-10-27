@@ -2,6 +2,7 @@
 
 #include "Core/Log.hpp"
 
+#include "Core/Camera.hpp"
 #include "Core/LogMath.hpp"
 #include "Core/Math.hpp"
 

@@ -37,9 +37,14 @@ void MESDLImGui::OnUpdate(Core::Scene &scene, const Core::Time &time) {
   if (!m_Initialized)
     return;
 
+  if (m_FrameStarted) {
+    ImGui::EndFrame();
+  }
+
   ImGui_ImplSDLGPU3_NewFrame();
   ImGui_ImplSDL3_NewFrame();
   ImGui::NewFrame();
+  m_FrameStarted = true;
 }
 
 void MESDLImGui::PrepareRender(SDL_GPUCommandBuffer *cmd) {
@@ -62,6 +67,7 @@ void MESDLImGui::RenderImGui(SDL_GPURenderPass *pass) {
 
   ImGui_ImplSDLGPU3_RenderDrawData(ImGui::GetDrawData(), cmdBuff,
                                    m_Renderer->GetGPUCurrentRenderPass());
+  m_FrameStarted = false;
 }
 
 void MESDLImGui::OnEvent(Core::Event &event) {

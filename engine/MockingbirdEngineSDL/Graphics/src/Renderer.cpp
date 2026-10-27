@@ -1,4 +1,5 @@
 #include "Graphics/Renderer.hpp"
+#include "Core/Math.hpp"
 
 #include <Core/Log.hpp>
 #include <cstring>
@@ -290,6 +291,30 @@ ShaderHandle Renderer::CreateShader(void *vert, size_t vertSize, void *frag,
 
   std::unordered_map<std::string, UniformBufferInternal> vertexUniforms =
       ReflectUniformBufferLayout(vertCompiler);
+  auto fb = vertexUniforms.find("ME_FrameBuffer");
+  auto ob = vertexUniforms.find("ME_ObjectBuffer");
+  if (fb == vertexUniforms.end() || ob == vertexUniforms.end() ||
+      fb->second.Binding != 0 || ob->second.Binding != 1) {
+    ME_LOG_CORE_ERROR("Invalid vertex shader. Engine buffers not found or "
+                      "placed incorrectly");
+    SDL_ReleaseGPUShader(m_Device, fragShader);
+    SDL_ReleaseGPUShader(m_Device, vertShader);
+    return MEGraphicsHandleNull;
+  }
+  if (m_FrameBufferUniform.empty() || m_ObjectBufferPropertyOffsets.empty()) {
+    m_FrameBufferUniform.resize(
+        vertexUniforms["ME_FrameBuffer"].Layout.GetStride(), 0);
+    m_ObjectBufferUniform.resize(
+        vertexUniforms["ME_ObjectBuffer"].Layout.GetStride(), 0);
+
+    for (const auto &attr : vertexUniforms["ME_FrameBuffer"].Layout) {
+      m_FrameBufferPropertyOffsets[attr.Name] = attr.Offset;
+    }
+    for (const auto &attr : vertexUniforms["ME_ObjectBuffer"].Layout) {
+      m_ObjectBufferPropertyOffsets[attr.Name] = attr.Offset;
+    }
+  }
+
   std::unordered_map<std::string, UniformBufferInternal> fragmentUniforms =
       ReflectUniformBufferLayout(fragCompiler);
 
@@ -436,50 +461,68 @@ PipelineHandle Renderer::CreateGraphicsPipeline(ShaderHandle shader,
   return static_cast<uint32_t>(m_Pipelines.size() - 1);
 }
 
-void Renderer::BeginFrame() {
+void Renderer::BeginFrame(const Core::MEMat4 &viewProj) {
+  m_CurrViewProj = viewProj;
   m_CurrentCmdBuff = SDL_AcquireGPUCommandBuffer(m_Device);
-  if (!m_CurrentCmdBuff)
-    return;
+}
 
-  bool success = SDL_AcquireGPUSwapchainTexture(
-      m_CurrentCmdBuff, m_Wnd, &m_CurrentTargetTexture, nullptr, nullptr);
-  if (!success || !m_CurrentTargetTexture) {
-    SDL_CancelGPUCommandBuffer(m_CurrentCmdBuff);
-    m_CurrentCmdBuff = nullptr;
-    return;
+// TODO: DRY!!!(with material)
+void UpdateSystemBufferValue(
+    std::vector<uint8_t> &buffer,
+    const std::unordered_map<std::string, uint32_t> &offsets,
+    const std::string &prop, const void *srcData, size_t size) {
+  auto it = offsets.find(prop);
+  if (it != offsets.end()) {
+    std::memcpy(buffer.data() + it->second, srcData, size);
   }
 }
 
-void Renderer::EndFrameAndFlush() {
-  if (!m_CurrentCmdBuff || !m_CurrentTargetTexture) {
-    m_RenderCommands.clear();
+void Renderer::ExecuteRenderPass(SDL_GPUTexture *targetTexture,
+                                 const Core::MEVec4 &clearColor) {
+
+  if (!m_CurrentCmdBuff || m_RenderQueue.empty())
+    return;
+
+  SDL_GPUColorTargetInfo colorTargetInfo{};
+  if (targetTexture == nullptr) {
+    SDL_AcquireGPUSwapchainTexture(m_CurrentCmdBuff, m_Wnd,
+                                   &m_CurrentTargetTexture, nullptr, nullptr);
+    colorTargetInfo.texture = m_CurrentTargetTexture;
+  } else {
+    colorTargetInfo.texture = targetTexture;
+  }
+  m_CurrentTargetTexture = colorTargetInfo.texture;
+
+  if (!m_CurrentTargetTexture) {
+    m_RenderQueue.clear();
     return;
   }
 
-  std::sort(m_RenderCommands.begin(), m_RenderCommands.end(),
+  colorTargetInfo.clear_color =
+      SDL_FColor{clearColor.r, clearColor.g, clearColor.b, clearColor.a};
+  colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
+  colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
+
+  std::sort(m_RenderQueue.begin(), m_RenderQueue.end(),
             [](const auto &a, const auto &b) {
               if (a.Pipeline != b.Pipeline)
                 return a.Pipeline < b.Pipeline;
               return a.Material.Id < b.Material.Id;
             });
 
-  for (const auto &layer : m_RenderLayers) {
-    if (layer.PreRenderCallback)
-      layer.PreRenderCallback(m_CurrentCmdBuff);
+  if (targetTexture == nullptr) {
+    for (const auto &layer : m_RenderLayers) {
+      if (layer.PreRenderCallback)
+        layer.PreRenderCallback(m_CurrentCmdBuff);
+    }
   }
-
-  SDL_GPUColorTargetInfo colorTargetInfo{};
-  colorTargetInfo.texture = m_CurrentTargetTexture;
-  colorTargetInfo.clear_color = m_ClearColor;
-  colorTargetInfo.load_op = SDL_GPU_LOADOP_CLEAR;
-  colorTargetInfo.store_op = SDL_GPU_STOREOP_STORE;
 
   m_CurrentRenderPass =
       SDL_BeginGPURenderPass(m_CurrentCmdBuff, &colorTargetInfo, 1, nullptr);
 
   SDL_GPUGraphicsPipeline *lastPipeline = nullptr;
 
-  for (const auto &cmd : m_RenderCommands) {
+  for (const auto &cmd : m_RenderQueue) {
     SDL_GPUGraphicsPipeline *pipeline = m_Pipelines[cmd.Pipeline];
 
     // bind pipeline
@@ -497,6 +540,22 @@ void Renderer::EndFrameAndFlush() {
     SDL_BindGPUVertexBuffers(m_CurrentRenderPass, 0, &vertBind, 1);
     SDL_GPUBufferBinding indBind{.buffer = ib.GPUBuffer, .offset = 0};
     SDL_BindGPUIndexBuffer(m_CurrentRenderPass, &indBind, ib.IndexFormat);
+
+    // updating ME_FrameBuffer
+    UpdateSystemBufferValue(
+        m_FrameBufferUniform, m_FrameBufferPropertyOffsets, "uViewProjection",
+        Core::Math::ValuePtrMat4(m_CurrViewProj), 4 * 4 * sizeof(float));
+    // TODO: Transfer camera position, time as well
+    SDL_PushGPUVertexUniformData(
+        m_CurrentCmdBuff, 0, m_FrameBufferUniform.data(),
+        static_cast<uint32_t>(m_FrameBufferUniform.size()));
+    // updating ME_ObjectBuffer
+    UpdateSystemBufferValue(
+        m_ObjectBufferUniform, m_ObjectBufferPropertyOffsets, "uModel",
+        Core::Math::ValuePtrMat4(cmd.Model), 4 * 4 * sizeof(float));
+    SDL_PushGPUVertexUniformData(
+        m_CurrentCmdBuff, 1, m_ObjectBufferUniform.data(),
+        static_cast<uint32_t>(m_ObjectBufferUniform.size()));
 
     // bind material and textures
     if (cmd.Material) {
@@ -534,18 +593,24 @@ void Renderer::EndFrameAndFlush() {
     SDL_DrawGPUIndexedPrimitives(m_CurrentRenderPass, ib.Count, 1, 0, 0, 0);
   }
 
-  for (const auto &layer : m_RenderLayers) {
-    if (layer.Callback)
-      layer.Callback(m_CurrentRenderPass);
+  if (targetTexture == nullptr) {
+    for (const auto &layer : m_RenderLayers) {
+      if (layer.Callback)
+        layer.Callback(m_CurrentRenderPass);
+    }
   }
 
   SDL_EndGPURenderPass(m_CurrentRenderPass);
-  SDL_SubmitGPUCommandBuffer(m_CurrentCmdBuff);
-
   m_CurrentRenderPass = nullptr;
+  m_RenderQueue.clear();
+}
+
+void Renderer::EndFrameAndFlush() {
+  if (m_CurrentCmdBuff) {
+    SDL_SubmitGPUCommandBuffer(m_CurrentCmdBuff);
+  }
   m_CurrentCmdBuff = nullptr;
   m_CurrentTargetTexture = nullptr;
-  m_RenderCommands.clear();
 }
 
 } // namespace Mockingbird::SDL::Graphics

@@ -31,5 +31,6 @@ private:
   void RenderImGui(SDL_GPURenderPass *pass);
 
   bool m_Initialized = false;
+  bool m_FrameStarted = false;
 };
 } // namespace Mockingbird::SDL::DearImGui

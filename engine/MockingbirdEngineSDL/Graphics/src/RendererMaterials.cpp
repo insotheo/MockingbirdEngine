@@ -1,4 +1,3 @@
-#include "Core/Math.hpp"
 #include "Graphics/Renderer.hpp"
 
 #include <Core/Log.hpp>
@@ -47,127 +46,71 @@ MaterialHandle Renderer::CreateMaterial(ShaderHandle shaderHnd,
   return CREATE_ME_GRAPHICS_HANDLE(mat.Version, index);
 }
 
-void Renderer::MaterialSetFloat(MaterialHandle hnd, const std::string &property,
-                                float val) {
+void Renderer::SetMaterialPropertyRaw(MaterialHandle hnd,
+                                      const std::string &property,
+                                      const void *srcData, size_t size) {
   if (!hnd)
     return;
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
   auto it = mat.PropertyOffsets.find(property);
   if (it != mat.PropertyOffsets.end()) {
-    std::memcpy(mat.UniformCPUBuffer.data() + it->second, &val, sizeof(float));
+    std::memcpy(mat.UniformCPUBuffer.data() + it->second, srcData, size);
   }
+}
+
+void Renderer::MaterialSetFloat(MaterialHandle hnd, const std::string &property,
+                                float val) {
+  SetMaterialPropertyRaw(hnd, property, &val, sizeof(float));
 }
 
 void Renderer::MaterialSetFloat2(MaterialHandle hnd,
                                  const std::string &property,
                                  const Core::MEVec2 &val) {
-  if (!hnd)
-    return;
-  MaterialInternal &mat = m_Materials[hnd.GetIndex()];
-  auto it = mat.PropertyOffsets.find(property);
-  if (it != mat.PropertyOffsets.end()) {
-    float data[2] = {val.x, val.y};
-    std::memcpy(mat.UniformCPUBuffer.data() + it->second, data, sizeof(data));
-  }
+  SetMaterialPropertyRaw(hnd, property, &val, 2 * sizeof(float));
 }
 
 void Renderer::MaterialSetFloat3(MaterialHandle hnd,
                                  const std::string &property,
                                  const Core::MEVec3 &val) {
-  if (!hnd)
-    return;
-  MaterialInternal &mat = m_Materials[hnd.GetIndex()];
-  auto it = mat.PropertyOffsets.find(property);
-  if (it != mat.PropertyOffsets.end()) {
-    float data[3] = {val.x, val.y, val.z};
-    std::memcpy(mat.UniformCPUBuffer.data() + it->second, data, sizeof(data));
-  }
+  SetMaterialPropertyRaw(hnd, property, &val, 3 * sizeof(float));
 }
 
 void Renderer::MaterialSetFloat4(MaterialHandle hnd,
                                  const std::string &property,
                                  const Core::MEVec4 &val) {
-  if (!hnd)
-    return;
-  MaterialInternal &mat = m_Materials[hnd.GetIndex()];
-  auto it = mat.PropertyOffsets.find(property);
-  if (it != mat.PropertyOffsets.end()) {
-    float data[4] = {val.x, val.y, val.z, val.w};
-    std::memcpy(mat.UniformCPUBuffer.data() + it->second, data, sizeof(data));
-  }
+  SetMaterialPropertyRaw(hnd, property, &val, 4 * sizeof(float));
 }
 
 void Renderer::MaterialSetInt(MaterialHandle hnd, const std::string &property,
                               int val) {
-  if (!hnd)
-    return;
-  MaterialInternal &mat = m_Materials[hnd.GetIndex()];
-  auto it = mat.PropertyOffsets.find(property);
-  if (it != mat.PropertyOffsets.end()) {
-    std::memcpy(mat.UniformCPUBuffer.data() + it->second, &val, sizeof(int));
-  }
+  SetMaterialPropertyRaw(hnd, property, &val, sizeof(int));
 }
 
 void Renderer::MaterialSetInt2(MaterialHandle hnd, const std::string &property,
                                const Core::MEVec2i &val) {
-  if (!hnd)
-    return;
-  MaterialInternal &mat = m_Materials[hnd.GetIndex()];
-  auto it = mat.PropertyOffsets.find(property);
-  if (it != mat.PropertyOffsets.end()) {
-    int data[2] = {val.x, val.y};
-    std::memcpy(mat.UniformCPUBuffer.data() + it->second, data, sizeof(data));
-  }
+  SetMaterialPropertyRaw(hnd, property, &val, 2 * sizeof(int));
 }
 
 void Renderer::MaterialSetInt3(MaterialHandle hnd, const std::string &property,
                                const Core::MEVec3i &val) {
-  if (!hnd)
-    return;
-  MaterialInternal &mat = m_Materials[hnd.GetIndex()];
-  auto it = mat.PropertyOffsets.find(property);
-  if (it != mat.PropertyOffsets.end()) {
-    int data[3] = {val.x, val.y, val.z};
-    std::memcpy(mat.UniformCPUBuffer.data() + it->second, data, sizeof(data));
-  }
+  SetMaterialPropertyRaw(hnd, property, &val, 3 * sizeof(int));
 }
 
 void Renderer::MaterialSetInt4(MaterialHandle hnd, const std::string &property,
                                const Core::MEVec4i &val) {
-  if (!hnd)
-    return;
-  MaterialInternal &mat = m_Materials[hnd.GetIndex()];
-  auto it = mat.PropertyOffsets.find(property);
-  if (it != mat.PropertyOffsets.end()) {
-    int data[4] = {val.x, val.y, val.z, val.w};
-    std::memcpy(mat.UniformCPUBuffer.data() + it->second, data, sizeof(data));
-  }
+  SetMaterialPropertyRaw(hnd, property, &val, 4 * sizeof(int));
 }
 
 void Renderer::MaterialSetMat3(MaterialHandle hnd, const std::string &property,
                                const Core::MEMat3 &val) {
-  if (!hnd)
-    return;
-  MaterialInternal &mat = m_Materials[hnd.GetIndex()];
-  auto it = mat.PropertyOffsets.find(property);
-  if (it != mat.PropertyOffsets.end()) {
-    const float *ptr = Core::Math::ValuePtrMat3(val);
-    std::memcpy(mat.UniformCPUBuffer.data() + it->second, ptr,
-                3 * 3 * sizeof(float));
-  }
+  SetMaterialPropertyRaw(hnd, property, Core::Math::ValuePtrMat3(val),
+                         3 * 3 * sizeof(float));
 }
 
 void Renderer::MaterialSetMat4(MaterialHandle hnd, const std::string &property,
                                const Core::MEMat4 &val) {
-  if (!hnd)
-    return;
-  MaterialInternal &mat = m_Materials[hnd.GetIndex()];
-  auto it = mat.PropertyOffsets.find(property);
-  if (it != mat.PropertyOffsets.end()) {
-    const float *ptr = Core::Math::ValuePtrMat4(val);
-    std::memcpy(mat.UniformCPUBuffer.data() + it->second, ptr,
-                4 * 4 * sizeof(float));
-  }
+  SetMaterialPropertyRaw(hnd, property, Core::Math::ValuePtrMat4(val),
+                         4 * 4 * sizeof(float));
 }
 
 void Renderer::MaterialSetTexture(MaterialHandle hnd, size_t index,
@@ -175,9 +118,9 @@ void Renderer::MaterialSetTexture(MaterialHandle hnd, size_t index,
   if (!hnd)
     return;
   MaterialInternal &mat = m_Materials[hnd.GetIndex()];
-  if (index >= mat.Textures.size())
-    return;
-  mat.Textures[index] = texture;
+  if (index < mat.Textures.size()) {
+    mat.Textures[index] = texture;
+  }
 }
 
 } // namespace Mockingbird::SDL::Graphics
