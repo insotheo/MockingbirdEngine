@@ -1,28 +1,30 @@
 #pragma once
 
-#include "Core/Math.hpp"
+#include <Core/Math.hpp>
+#include <ECS/Components.hpp>
+#include <SDL3/SDL.h>
 
-namespace Mockingbird::Core {
+namespace Mockingbird::SDL::Graphics {
 class Camera {
 public:
   enum class Mode { Perspective, Orthographic };
 
   Camera(Mode mode = Mode::Orthographic) : m_Mode(mode) { UpdateMatrices(); }
 
-  inline void SetPosition(const MEVec3 &pos) {
+  inline void SetPosition(const Core::MEVec3 &pos) {
     m_Pos = pos;
     m_Dirty = true;
   }
-  inline void Move(const MEVec3 &delta) {
+  inline void Move(const Core::MEVec3 &delta) {
     m_Pos += delta;
     m_Dirty = true;
   }
 
-  inline void SetRotation(const MEVec3 &rot) {
+  inline void SetRotation(const Core::MEVec3 &rot) {
     m_Rot = rot;
     m_Dirty = true;
   }
-  inline void Rotate(const MEVec3 &delta) {
+  inline void Rotate(const Core::MEVec3 &delta) {
     m_Rot += delta;
     m_Dirty = true;
   }
@@ -54,19 +56,19 @@ public:
     m_Dirty = true;
   }
 
-  inline const MEMat4 &GetViewMatrix() {
+  inline const Core::MEMat4 &GetViewMatrix() {
     if (m_Dirty)
       UpdateMatrices();
     return m_ViewMat;
   }
 
-  inline const MEMat4 &GetProjectionMatrix() {
+  inline const Core::MEMat4 &GetProjectionMatrix() {
     if (m_Dirty)
       UpdateMatrices();
     return m_ProjMat;
   }
 
-  inline const MEMat4 GetViewProjectionMatrix() {
+  inline const Core::MEMat4 GetViewProjectionMatrix() {
     if (m_Dirty)
       UpdateMatrices();
     return m_ProjMat * m_ViewMat;
@@ -78,8 +80,8 @@ private:
   Mode m_Mode;
   bool m_Dirty = false;
 
-  MEVec3 m_Pos{0.f};
-  MEVec3 m_Rot{0.f};
+  Core::MEVec3 m_Pos{0.f};
+  Core::MEVec3 m_Rot{0.f};
 
   float m_FOV = ME_DEG_TO_RAD(60.f);
   float m_AspectRatio = 16.f / 9.f;
@@ -92,7 +94,7 @@ private:
   float m_NearClip = 0.001f;
   float m_FarClip = 1000.0f;
 
-  MEMat4 m_ViewMat{1.f};
-  MEMat4 m_ProjMat{1.f};
+  Core::MEMat4 m_ViewMat{1.f};
+  Core::MEMat4 m_ProjMat{1.f};
 };
-} // namespace Mockingbird::Core
+} // namespace Mockingbird::SDL::Graphics

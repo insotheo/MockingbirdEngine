@@ -23,6 +23,7 @@ set(SubsystemSources
     src/Renderer.cpp
     src/RendererMaterials.cpp
     src/RendererShadersReflection.cpp
+    src/Camera.cpp
 )
 
 add_library(MockingbirdEngineSDLGraphics STATIC ${SubsystemSources})

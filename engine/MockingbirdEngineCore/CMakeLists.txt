@@ -8,7 +8,6 @@ set(ENGINE_CORE
     src/SubsystemManager.cpp
     src/VFS.cpp
     src/VFSPhysical.cpp
-    src/Camera.cpp
 )
 
 FetchContent_Declare(

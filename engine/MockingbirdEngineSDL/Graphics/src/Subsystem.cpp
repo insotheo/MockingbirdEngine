@@ -31,17 +31,16 @@ void MESDLGraphicsSubsystem::OnRender(Core::Scene &scene) {
   };
   std::vector<CameraTask> camTasks;
 
-  auto camView = registry.view<const Core::MEComponent(Camera)>();
+  auto camView = registry.view<const MEComponent(Camera)>();
   for (auto entity : camView) {
-    const auto &camComp = camView.get<const Core::MEComponent(Camera)>(entity);
+    const auto &camComp = camView.get<const MEComponent(Camera)>(entity);
     if (!camComp.IsActive)
       continue;
 
     camTasks.push_back({
-        const_cast<Core::Camera &>(camComp.CamInstance)
-            .GetViewProjectionMatrix(),
+        const_cast<Camera &>(camComp.CamInstance).GetViewProjectionMatrix(),
         camComp.ClearColor,
-        static_cast<SDL_GPUTexture *>(camComp.TargetTexture),
+        camComp.TargetTexture,
         camComp.RenderOrder,
     });
   }

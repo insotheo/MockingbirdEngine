@@ -63,7 +63,7 @@ public:
     sprite.AddComponent<Core::MEComponent(Transform)>();
 
     Core::Entity camera = testScene.CreateEntity();
-    camera.AddComponent<Core::MEComponent(Camera)>();
+    camera.AddComponent<SDL::Graphics::MEComponent(Camera)>();
 
     spriteID = static_cast<Core::EntityHandle>(sprite);
     cameraID = static_cast<Core::EntityHandle>(camera);
@@ -92,7 +92,7 @@ public:
         sprite.GetComponent<SDL::Graphics::MEComponent(Renderable)>().Material,
         "uTime", static_cast<float>(time.TotalTime));
 
-    cam.GetComponent<Core::MEComponent(Camera)>().CamInstance.Rotate(
+    cam.GetComponent<SDL::Graphics::MEComponent(Camera)>().CamInstance.Rotate(
         Core::MEVec3{
             0.f,
             0.f,

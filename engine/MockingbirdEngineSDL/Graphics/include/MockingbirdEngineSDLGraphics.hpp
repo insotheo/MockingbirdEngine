@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Graphics/BufferLayout.hpp"
+#include "Graphics/Camera.hpp"
 #include "Graphics/Descriptors.hpp"
 #include "Graphics/GraphicsHandle.hpp"
 
