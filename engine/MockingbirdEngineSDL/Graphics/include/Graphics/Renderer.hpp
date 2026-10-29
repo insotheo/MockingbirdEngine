@@ -216,6 +216,11 @@ private:
   void SetMaterialPropertyRaw(MaterialHandle hnd, const std::string &property,
                               const void *srcData, size_t size);
 
+  void UpdateSystemBufferValue(
+      std::vector<uint8_t> &buffer,
+      const std::unordered_map<std::string, uint32_t> &offsets,
+      const std::string &prop, const void *srcData, size_t size);
+
 private:
   SDL_GPUDevice *m_Device = nullptr;
   SDL_Window *m_Wnd = nullptr;

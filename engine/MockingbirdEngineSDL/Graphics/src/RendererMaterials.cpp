@@ -46,6 +46,16 @@ MaterialHandle Renderer::CreateMaterial(ShaderHandle shaderHnd,
   return CREATE_ME_GRAPHICS_HANDLE(mat.Version, index);
 }
 
+void Renderer::UpdateSystemBufferValue(
+    std::vector<uint8_t> &buffer,
+    const std::unordered_map<std::string, uint32_t> &offsets,
+    const std::string &prop, const void *srcData, size_t size) {
+  auto it = offsets.find(prop);
+  if (it != offsets.end()) {
+    std::memcpy(buffer.data() + it->second, srcData, size);
+  }
+}
+
 void Renderer::SetMaterialPropertyRaw(MaterialHandle hnd,
                                       const std::string &property,
                                       const void *srcData, size_t size) {

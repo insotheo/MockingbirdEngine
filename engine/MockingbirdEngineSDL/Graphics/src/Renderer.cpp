@@ -466,17 +466,6 @@ void Renderer::BeginFrame(const Core::MEMat4 &viewProj) {
   m_CurrentCmdBuff = SDL_AcquireGPUCommandBuffer(m_Device);
 }
 
-// TODO: DRY!!!(with material)
-void UpdateSystemBufferValue(
-    std::vector<uint8_t> &buffer,
-    const std::unordered_map<std::string, uint32_t> &offsets,
-    const std::string &prop, const void *srcData, size_t size) {
-  auto it = offsets.find(prop);
-  if (it != offsets.end()) {
-    std::memcpy(buffer.data() + it->second, srcData, size);
-  }
-}
-
 void Renderer::ExecuteRenderPass(SDL_GPUTexture *targetTexture,
                                  const Core::MEVec4 &clearColor) {
 
