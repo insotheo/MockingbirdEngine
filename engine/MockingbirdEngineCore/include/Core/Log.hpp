@@ -50,14 +50,30 @@
 
 #else
 
-#define ME_LOG_TRACE(...)
-#define ME_LOG_INFO(...)
-#define ME_LOG_WARN(...)
-#define ME_LOG_ERROR(...)
+#define ME_LOG_TRACE(...)                                                      \
+  do {                                                                         \
+  } while (0)
+#define ME_LOG_INFO(...)                                                       \
+  do {                                                                         \
+  } while (0)
+#define ME_LOG_WARN(...)                                                       \
+  do {                                                                         \
+  } while (0)
+#define ME_LOG_ERROR(...)                                                      \
+  do {                                                                         \
+  } while (0)
 
-#define ME_LOG_CORE_TRACE(...)
-#define ME_LOG_CORE_INFO(...)
-#define ME_LOG_CORE_WARN(...)
-#define ME_LOG_CORE_ERROR(...)
+#define ME_LOG_CORE_TRACE(...)                                                 \
+  do {                                                                         \
+  } while (0)
+#define ME_LOG_CORE_INFO(...)                                                  \
+  do {                                                                         \
+  } while (0)
+#define ME_LOG_CORE_WARN(...)                                                  \
+  do {                                                                         \
+  } while (0)
+#define ME_LOG_CORE_ERROR(...)                                                 \
+  do {                                                                         \
+  } while (0)
 
 #endif
